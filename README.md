@@ -1,0 +1,2 @@
+# GroupX
+AI Trading Assistant
