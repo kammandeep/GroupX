@@ -1,8 +1,11 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
-.env                    # If you store API keys here
-.vscode/settings.json
+.env
+.venv
+.env.local
+.env.*.local
+.vscode/
 *.log
 .DS_Store
-ml_pipeline/trained_models/*  # Save models in git but ignore large files initially
+ml_pipeline/trained_models/
