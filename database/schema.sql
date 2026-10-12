@@ -166,18 +166,4 @@ companies.id ←→ stock_data.ticker     → Stock data links to companies
 users.id  ←→ user_watchlists.user_id  → Users own their watchlists
 stock_data.date is YYYY-MM-DD text    → Use date strings, not timestamps
 
-QUERIES YOU'LL USE OFTEN:
-Get latest price for a stock:
-SELECT close FROM v_latest_prices WHERE ticker = 'AAPL';
-
-Get all stocks in a sector:
-SELECT c.ticker, c.name FROM companies c 
-INNER JOIN stock_data sd ON c.ticker = sd.ticker 
-ORDER BY sd.date DESC;
-
-User's watchlist:
-SELECT w.ticker, w.notes 
-FROM user_watchlists w 
-WHERE w.user_id = ?;  -- Replace ? with user ID
-
 */
