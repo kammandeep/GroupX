@@ -163,9 +163,9 @@ CREATE INDEX IF NOT EXISTS idx_user_watchlists_user_id ON user_watchlists(user_i
 CREATE INDEX IF NOT EXISTS idx_watchlist_items_watchlist ON watchlist_items(watchlist_id);
 CREATE INDEX IF NOT EXISTS idx_watchlist_items_stock ON watchlist_items(ticker);
 
--- =============================================================================
+-- ===========================================
 -- SECTION 10: HELPER VIEWS FOR QUICK QUERIES
--- =============================================================================
+-- ===========================================
 
 -- View to get latest price for each stock
 CREATE VIEW IF NOT EXISTS v_latest_prices AS
@@ -235,18 +235,18 @@ JOIN stocks st ON st.ticker = ts.ticker
 JOIN companies c ON c.id = st.company_id
 ORDER BY ts.signal_timestamp DESC;
 
--- =============================================================================
+-- ==============================================
 -- DATABASE CONFIGURATION FOR BETTER PERFORMANCE
--- =============================================================================
+-- ==============================================
 
 PRAGMA journal_mode = WAL;                    -- Write-ahead logging for better concurrency
 PRAGMA synchronous = NORMAL;                  -- Balance safety & performance
 PRAGMA cache_size = -64000;                   -- 64MB cache (in pages, negative means KB)
 PRAGMA temp_store = MEMORY;                   -- Use memory for temporary tables
 
--- =============================================================================
+-- =============================================
 -- USAGE NOTES (For your development reference)
--- =============================================================================
+-- =============================================
 
 /*
 TABLE SUMMARY:
