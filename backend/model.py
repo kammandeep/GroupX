@@ -254,15 +254,19 @@ y_pred = model.predict(X_val)
 val_proba = model.predict_proba(X_val)[:,1]
 test_proba = model.predict_proba(X_test)[:,1]
 
+# FOR INTERNAL USE ONLY TO ENSURE PREDICTIONS ARE COMING THROUGH
 print("Accuracy: ", accuracy_score(y_val, y_pred))
 print("\nClassification:\n", classification_report(y_val, y_pred))
 
+# SET UP NEW DATAFRAMES WITH EVALUATION AND TEST RESULTS
 validate_model['xgb_prob'] = val_proba
 test_model['xgb_prob'] = test_proba
 
+# SET THE FEATURES / INPUTS FOR THE LSTM MODEL
 lstm_features = future_predictions + ['xgb_prob']
 sequence_len = 20
 
+# FUNCTION TO SET THE X AND Y DATA FOR LSTM DL MODEL
 def make_sequences(df, features, target, sequence_len):
     X = []
     y = []
@@ -278,6 +282,8 @@ def make_sequences(df, features, target, sequence_len):
             d.append(dates[i])
     return np.array(X), np.array(y)
 
+
+# 
 scaler = StandardScaler().fit(validate_model[lstm_features])
 validate_model[lstm_features] = scaler.transform(validate_model[lstm_features])
 test_model[lstm_features] = scaler.transform(test_model[lstm_features])
@@ -285,6 +291,7 @@ test_model[lstm_features] = scaler.transform(test_model[lstm_features])
 X_val_sequence, y_val_sequence = make_sequences(validate_model, lstm_features, 'target_day', sequence_len)
 X_test_sequence, y_test_sequence = make_sequences(test_model, lstm_features, 'target_day', sequence_len)
 
+# CONVERT THE DATA USING PYTORCH SO LSTM CAN USE SAID DATA
 X_val_torch = torch.tensor(X_val_sequence, dtype=torch.float32)
 y_val_torch = torch.tensor(y_val_sequence, dtype=torch.float32)
 X_test_torch = torch.tensor(X_test_sequence, dtype=torch.float32)
@@ -294,12 +301,14 @@ y_test_torch = torch.tensor(y_test_sequence, dtype=torch.float32)
 # SET THE DL MODEL - LSTM
 #======================================================
 
+# SET CLASS WITH OWN FUNCTIONS TO BE CALLED LATER
 class LSTMModel(nn.Module):
+    # SETS THE DIMENSIONS TO BE USED IN THE LSTM
     def __init__(self, input_dim, hidden_dim, layer_dim):
         super(LSTMModel, self).__init__()
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, 1)
-        
+    #    
     def forward(self, x):        
         out, _ = self.lstm(x)
         return self.fc(out[:, -1, :]).squeeze(-1)
