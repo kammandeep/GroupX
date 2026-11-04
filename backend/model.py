@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import copy
 from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
@@ -310,9 +311,9 @@ def make_sequences(df, features, target, sequence_len, start=None, end=None):
         p = g['xgb_prob_raw'].values
         dates = g['date'].values
         for i in range(sequence_len - 1, len(g)):
-            if start is not None and d[i] <= start:
+            if start is not None and dates[i] <= start:
                 continue
-            if end is not None and d[i] > end:
+            if end is not None and dates[i] > end:
                 continue
             X.append(f[i - sequence_len + 1 : i + 1])
             y.append(t[i])
@@ -339,9 +340,7 @@ X_train_tensor, y_train_tensor = to_tensor(dl_train["X"], dl_train["y"])
 X_val_tensor, y_val_tensor = to_tensor(dl_val["X"], dl_val["y"])
 X_test_tensor, y_test_tensor = to_tensor(dl_test["X"], dl_test["y"])
 
-
 train_loader = DataLoader(TensorDataset(X_train_tensor, y_train_tensor), batch_size=64, shuffle=True) 
-
 
 #======================================================
 # SET THE DL MODEL - LSTM
@@ -350,9 +349,10 @@ train_loader = DataLoader(TensorDataset(X_train_tensor, y_train_tensor), batch_s
 # SET CLASS WITH OWN FUNCTIONS TO BE CALLED LATER
 class LSTMModel(nn.Module):
     # SETS THE DIMENSIONS TO BE USED IN THE LSTM
-    def __init__(self, input_dim, hidden_dim, layer_dim):
-        super(LSTMModel, self).__init__()
+    def __init__(self, input_dim, hidden_dim, layer_dim, dropout=0.3):
+        super().__init__()
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
+        self.drop = nn.Dropout(dropout)
         self.fc = nn.Linear(hidden_dim, 1)
     #    
     def forward(self, x):        
@@ -362,34 +362,56 @@ class LSTMModel(nn.Module):
     
 dl_model = LSTMModel(input_dim=len(lstm_features), hidden_dim=100, layer_dim=1)
 criterion = nn.BCEWithLogitsLoss()
-optimiser = torch.optim.Adam(dl_model.parameters(), lr=0.001)
+optimiser = torch.optim.Adam(dl_model.parameters(), lr=0.001, weight_decay=1e-4)
 
-num_epochs = 100
+num_epochs = 200
+patience = 10
+best_val_loss = float("inf")
+best_state = None
+no_epoch_improvemnt = 0
 
 for epoch in range(num_epochs):
     dl_model.train()
-    optimiser.zero_grad()
+    for xb, yb in train_loader:
+        optimiser.zero_grad()
+        loss = criterion(dl_model(X_val_tensor), y_val_tensor)
+        loss.backward()
+        optimiser.step()
+        
+    dl_model.eval()
+    with torch.no_grad():
+        val_loss = criterion(dl_model(X_val_tensor), y_val_tensor).item()
     
-    loss = criterion(dl_model(X_val_torch), y_val_torch)
-    loss.backward()
-    optimiser.step()
-    
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        best_state = copy.deepcopy(dl_model.state_dict())
+    else:
+        no_epoch_improvemnt += 1
+        
     if (epoch + 1) % 10 == 0:
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+        
+    if no_epoch_improvemnt >= patience:
+        break
     
-    
+dl_model.load_state_dict(best_state)
+
 dl_model.eval()
+
 with torch.no_grad():
-    test_logits = dl_model(X_test_torch)
-    test_prob = torch.sigmoid(test_logits).numpy()
-    test_pred = (test_prob > 0.5).astype(int)
-    
-print("LSTM test accuracy: ", accuracy_score(y_test_sequence, test_pred))
-print("LSTM test AUC: ", roc_auc_score(y_test_sequence, test_prob))
-print(classification_report(y_test_sequence, test_pred))    
+    test_prob = torch.sigmoid(dl_model(X_test_tensor)).numpy()
+test_pred = (test_prob > 0.5).astype(int)
+xgb_pred = (dl_test['raw_prob'] > 0.5).astype(int)
+
+majority_class = int(round(dl_train["y"].mean()))
+majority_acc = accuracy_score(dl_test["y"], np.full_like(dl_test["y"], majority_class))
 
 out = pd.DataFrame({
-    'date'
+    'date' : dl_test["dates"],
+    "symbol": dl_test["syms"],
+    "target_day" : dl_test["y"],
+    'xgb_prob': dl_test["raw_prob"],
+    "lstm_prob": test_prob
 })
 
 out.to_csv("final_test_predictions.csv", index=False)
