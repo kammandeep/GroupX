@@ -26,7 +26,7 @@ Base = DeclarativeBase()  # Base class for all model classes
 # Step 3: Import Model Classes from models.py
 # ============================================
 from models import User, Company, Stock, StockData, Prediction, UserWatchlist, WatchlistItem, TradingSignal
-from seed_data import populate_sample_data
+from database.seed_data import populate_sample_data
 
 # Helper function to get any model class by name
 def get_model_class(model_name):
@@ -45,7 +45,7 @@ def init_db():
     with Session(engine) as session:
         Base.metadata.create_all(bind=engine)  # Creates tables automatically!
         
-        from seed_data import populate_sample_data
+        from database.seed_data import populate_sample_data
         populate_sample_data(session)
     
     print(f"✓ Database initialized: {db_url}")
