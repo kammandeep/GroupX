@@ -110,9 +110,6 @@ df.info()
 print(df.isnull().sum())
 
 
-df = pd.read_csv("HistoricalData.csv")
-
-
 print(df.info())
 print(df.describe())
 print("Missing Values: ")
@@ -287,7 +284,7 @@ target = 'target_day'
 
 val_dates = np.sort(val_df['date'].unique())
 cut = val_dates[int(len(val_dates) * 0.7)]
-val_end = val_dates - 1
+val_end = val_dates[-1]
 
 lstm_train_rows = val_df[val_df['date'] <= cut ]
 scaler = StandardScaler().fit(lstm_train_rows[lstm_features])
@@ -357,7 +354,7 @@ class LSTMModel(nn.Module):
     #    
     def forward(self, x):        
         out, _ = self.lstm(x)
-        return self.fc(out[:, -1, :]).squeeze(-1)
+        return self.fc(self.drop(out[:, -1, :])).squeeze(-1)
     
     
 dl_model = LSTMModel(input_dim=len(lstm_features), hidden_dim=100, layer_dim=1)
@@ -374,7 +371,7 @@ for epoch in range(num_epochs):
     dl_model.train()
     for xb, yb in train_loader:
         optimiser.zero_grad()
-        loss = criterion(dl_model(X_val_tensor), y_val_tensor)
+        loss = criterion(dl_model(xb), yb)
         loss.backward()
         optimiser.step()
         
@@ -385,6 +382,7 @@ for epoch in range(num_epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         best_state = copy.deepcopy(dl_model.state_dict())
+        no_epoch_improvemnt = 0
     else:
         no_epoch_improvemnt += 1
         
@@ -413,5 +411,10 @@ out = pd.DataFrame({
     'xgb_prob': dl_test["raw_prob"],
     "lstm_prob": test_prob
 })
+
+y_results = dl_test["y"]
+print(f"Majority class accuraccy: {majority_acc:.4f}")
+print(f"XGBoost alone acc: {accuracy_score(y_results, xgb_pred):.4f} AUC: {roc_auc_score(y_results, dl_test["raw_prob"])}")
+print(f"XGBoost + LSTM acc {accuracy_score(y_results, test_pred)} AUC: {roc_auc_score(y_results, test_prob)}")
 
 out.to_csv("final_test_predictions.csv", index=False)
