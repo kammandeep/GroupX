@@ -1,17 +1,23 @@
 import pandas as pd
 import numpy as np
+import copy
 from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 import requests
 import os
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 
 load_dotenv()
+
+#==============================================
+# API TO GRAB HISTORICAL DATA
+#==============================================
 
 # Get locally stored API Keys from .evn file
 keyID = os.getenv("APCA_API_KEY_ID")
@@ -102,9 +108,6 @@ print(df.shape)
 df.info()
 
 print(df.isnull().sum())
-
-
-df = pd.read_csv("HistoricalData.csv")
 
 
 print(df.info())
@@ -241,7 +244,7 @@ print(y_test.value_counts(normalize=True))
 print(X_train.shape, X_val.shape, X_test.shape)
 
 #======================================================
-# SET THE MODEL
+# SET TRAIN AND TEST THE ML MODEL - XGBOOST
 #======================================================
 
 model = xgb.XGBClassifier(booster="gbtree", n_estimators=200, max_depth=4, learning_rate=0.1)
@@ -254,73 +257,164 @@ y_pred = model.predict(X_val)
 val_proba = model.predict_proba(X_val)[:,1]
 test_proba = model.predict_proba(X_test)[:,1]
 
+# FOR INTERNAL USE ONLY TO ENSURE PREDICTIONS ARE COMING THROUGH
 print("Accuracy: ", accuracy_score(y_val, y_pred))
 print("\nClassification:\n", classification_report(y_val, y_pred))
 
+# SET UP NEW DATAFRAMES WITH EVALUATION AND TEST RESULTS
 validate_model['xgb_prob'] = val_proba
 test_model['xgb_prob'] = test_proba
 
+# SAVE OUT EVALUATION AND TEST PREDICTIONS TO CSV FILES
+keep = ['symbol', 'date'] + future_predictions + ['xgb_prob', 'target_day']
+validate_model[keep].to_csv("xgb_val_predictions.csv", index=False)
+test_model[keep].to_csv("xgb_test_predictions.csv", index=False)
+
+#======================================================
+# SET, TRAIN AND TEST THE DL MODEL - LSTM
+#======================================================
+
+val_df = validate_model[keep]
+test_df = test_model[keep]
+
+# SET THE FEATURES / INPUTS FOR THE LSTM MODEL
 lstm_features = future_predictions + ['xgb_prob']
 sequence_len = 20
+target = 'target_day'
 
-def make_sequences(df, features, target, sequence_len):
+val_dates = np.sort(val_df['date'].unique())
+cut = val_dates[int(len(val_dates) * 0.7)]
+val_end = val_dates[-1]
+
+lstm_train_rows = val_df[val_df['date'] <= cut ]
+scaler = StandardScaler().fit(lstm_train_rows[lstm_features])
+
+all_df = pd.concat([val_df, test_df], ignore_index=True)
+all_df = all_df.sort_values(['symbol', 'date']).reset_index(drop=True)
+all_df['xgb_prob_raw'] = all_df['xgb_prob']
+all_df[lstm_features] = scaler.transform(all_df[lstm_features])
+
+# FUNCTION TO SET THE X, Y DATES, XGBOOST PREDICTIONS (PROBA) AND SYMS (STOCK SYMBOLS)
+def make_sequences(df, features, target, sequence_len, start=None, end=None):
     X = []
     y = []
     d = []
+    raw_prob = []
+    syms = []
     for sym, g in df.groupby('symbol'):
         g = g.sort_values('date')
         f = g[features].values
         t = g[target].values
+        p = g['xgb_prob_raw'].values
         dates = g['date'].values
         for i in range(sequence_len - 1, len(g)):
+            if start is not None and dates[i] <= start:
+                continue
+            if end is not None and dates[i] > end:
+                continue
             X.append(f[i - sequence_len + 1 : i + 1])
             y.append(t[i])
             d.append(dates[i])
-    return np.array(X), np.array(y)
+            syms.append(sym)
+            raw_prob.append(p[i])
+    return {
+        "X": np.array(X),
+        "y": np.array(y),
+        "raw_prob": np.array(raw_prob),
+        "dates":np.array(d),
+        "syms":np.array(syms),
+    }
+    
+dl_train = make_sequences(all_df, lstm_features, target, sequence_len, end=cut)
+dl_val = make_sequences(all_df, lstm_features, target, sequence_len, start=cut, end=val_end)
+dl_test = make_sequences(all_df, lstm_features, target, sequence_len, start=val_end)
 
-scaler = StandardScaler().fit(validate_model[lstm_features])
-validate_model[lstm_features] = scaler.transform(validate_model[lstm_features])
-test_model[lstm_features] = scaler.transform(test_model[lstm_features])
+# CONVERT THE DATA USING PYTORCH SO LSTM CAN USE SAID DATA THROUGH FUNCTION
+def to_tensor(X, y):
+    return(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32))
 
-X_val_sequence, y_val_sequence = make_sequences(validate_model, lstm_features, 'target_day', sequence_len)
-X_test_sequence, y_test_sequence = make_sequences(test_model, lstm_features, 'target_day', sequence_len)
+X_train_tensor, y_train_tensor = to_tensor(dl_train["X"], dl_train["y"])
+X_val_tensor, y_val_tensor = to_tensor(dl_val["X"], dl_val["y"])
+X_test_tensor, y_test_tensor = to_tensor(dl_test["X"], dl_test["y"])
 
-X_val_torch = torch.tensor(X_val_sequence, dtype=torch.float32)
-y_val_torch = torch.tensor(y_val_sequence, dtype=torch.float32)
-X_test_torch = torch.tensor(X_test_sequence, dtype=torch.float32)
-y_test_torch = torch.tensor(y_test_sequence, dtype=torch.float32)
+train_loader = DataLoader(TensorDataset(X_train_tensor, y_train_tensor), batch_size=64, shuffle=True) 
 
 #======================================================
 # SET THE DL MODEL - LSTM
 #======================================================
 
+# SET CLASS WITH OWN FUNCTIONS TO BE CALLED LATER
 class LSTMModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim):
-        super(LSTMModel, self).__init__()
+    # SETS THE DIMENSIONS TO BE USED IN THE LSTM
+    def __init__(self, input_dim, hidden_dim, layer_dim, dropout=0.3):
+        super().__init__()
         self.lstm = nn.LSTM(input_dim, hidden_dim, layer_dim, batch_first=True)
+        self.drop = nn.Dropout(dropout)
         self.fc = nn.Linear(hidden_dim, 1)
-        
+    #    
     def forward(self, x):        
         out, _ = self.lstm(x)
-        return self.fc(out[:, -1, :]).squeeze(-1)
+        return self.fc(self.drop(out[:, -1, :])).squeeze(-1)
     
     
 dl_model = LSTMModel(input_dim=len(lstm_features), hidden_dim=100, layer_dim=1)
 criterion = nn.BCEWithLogitsLoss()
-optimiser = torch.optim.Adam(dl_model.parameters(), lr=0.001)
+optimiser = torch.optim.Adam(dl_model.parameters(), lr=0.001, weight_decay=1e-4)
 
-num_epochs = 100
+num_epochs = 200
+patience = 10
+best_val_loss = float("inf")
+best_state = None
+no_epoch_improvemnt = 0
 
 for epoch in range(num_epochs):
     dl_model.train()
-    optimiser.zero_grad()
+    for xb, yb in train_loader:
+        optimiser.zero_grad()
+        loss = criterion(dl_model(xb), yb)
+        loss.backward()
+        optimiser.step()
+        
+    dl_model.eval()
+    with torch.no_grad():
+        val_loss = criterion(dl_model(X_val_tensor), y_val_tensor).item()
     
-    loss = criterion(dl_model(X_val_torch), y_val_torch)
-    loss.backward()
-    optimiser.step()
-    
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        best_state = copy.deepcopy(dl_model.state_dict())
+        no_epoch_improvemnt = 0
+    else:
+        no_epoch_improvemnt += 1
+        
     if (epoch + 1) % 10 == 0:
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+        
+    if no_epoch_improvemnt >= patience:
+        break
     
-    
-    
+dl_model.load_state_dict(best_state)
+
+dl_model.eval()
+
+with torch.no_grad():
+    test_prob = torch.sigmoid(dl_model(X_test_tensor)).numpy()
+test_pred = (test_prob > 0.5).astype(int)
+xgb_pred = (dl_test['raw_prob'] > 0.5).astype(int)
+
+majority_class = int(round(dl_train["y"].mean()))
+majority_acc = accuracy_score(dl_test["y"], np.full_like(dl_test["y"], majority_class))
+
+out = pd.DataFrame({
+    'date' : dl_test["dates"],
+    "symbol": dl_test["syms"],
+    "target_day" : dl_test["y"],
+    'xgb_prob': dl_test["raw_prob"],
+    "lstm_prob": test_prob
+})
+
+y_results = dl_test["y"]
+print(f"Majority class accuraccy: {majority_acc:.4f}")
+print(f"XGBoost alone acc: {accuracy_score(y_results, xgb_pred):.4f} AUC: {roc_auc_score(y_results, dl_test["raw_prob"])}")
+print(f"XGBoost + LSTM acc {accuracy_score(y_results, test_pred)} AUC: {roc_auc_score(y_results, test_prob)}")
+
+out.to_csv("final_test_predictions.csv", index=False)
