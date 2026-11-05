@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -9,13 +8,21 @@
     </head>
     <body>
         <div class="layout">
+            <div class="header">
+                <img src="{{ url_for('static'. filename='images/JAK-logo.png')}}" alt="JAK logo">
+                <h1>This is the Header for operation JAK </h1>
+                <h2>Pretty nifty huh? </h2>
+            </div>
             <aside class="sidebar">
                 <a href="{{ url_for('index') }}">Dashboard</a>
                 <a href="{{ url_for('get_stocks') }}">Get Stocks</a>
             </aside>
-         <main>
+            <main>
                 {% block content %}{% endblock %}
             </main>
+            <div class="footer">
+                <h3>This is the foot</h3>
+            </div>
         </div>
     </body>
 </html>
