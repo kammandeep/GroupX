@@ -26,6 +26,7 @@ Base = DeclarativeBase()  # Base class for all model classes
 # Step 3: Import Model Classes from models.py
 # ============================================
 from models import User, Company, Stock, StockData, Prediction, UserWatchlist, WatchlistItem, TradingSignal
+from database.seed_data import populate_sample_data
 
 # Helper function to get any model class by name
 def get_model_class(model_name):
@@ -44,7 +45,7 @@ def init_db():
     with Session(engine) as session:
         Base.metadata.create_all(bind=engine)  # Creates tables automatically!
         
-        from seed_data import populate_sample_data
+        from database.seed_data import populate_sample_data
         populate_sample_data(session)
     
     print(f"✓ Database initialized: {db_url}")
@@ -61,23 +62,28 @@ def index():
 @app.route('/api/stocks', methods=['GET'])  # Returns stock data as JSON
 def get_stocks():
     """Gets all stocks and returns them as JSON for frontend"""
-    with Session(engine) as session:
-        companies = Company.query.all()
-        model_classes = {m.__name__: m for m in [Company, Stock]}
-        
-        result = []
-        for company in companies:
-            model = model_classes.get(company.__class__.__name__, Stock)
-            stocks = model.query.filter_by(company_id=company.id).all()
+    try:
+        with Session(engine) as session:
+            companies = Company.query.all()
+            model_classes = {m.__name__: m for m in [Company, Stock]}
             
-            for stock in stocks:
-                result.append({
-                    'id': stock.id,
-                    'ticker': stock.ticker,
-                    'company_name': company.name,
-                    'exchange_code': stock.exchange_code,
-                    'current_price': get_latest_close(stock)
-                })
+            result = []
+            for company in companies:
+                model = model_classes.get(company.__class__.__name__, Stock)
+                stocks = model.query.filter_by(company_id=company.id).all()
+                
+                for stock in stocks:
+                    result.append({
+                        'id': stock.id,
+                        'ticker': stock.ticker,
+                        'company_name': company.name,
+                        'exchange_code': stock.exchange_code,
+                        'current_price': get_latest_close(stock)
+                    })
+    
+    except Exception as e:
+        print(f"Error getting stocks: {e}")
+        return []
     
     return result
 
@@ -86,10 +92,16 @@ def get_stock(stock_id):
     """Getting specific stock's information"""
     Stock = get_model_class('Stock')
     try:
-        stock = Stock.query.get_or_404(stock_id)
-        return {'error': 'Stock not found'}
+        with Session(engine) as session:
+            stock_obj = Stock.query.get_or_404(stock_id)
+        return {
+            'id': stock_obj.id,
+            'ticker': stock_obj.ticker,
+            'company_name': Company.query.get(stock_obj.company_id).name if stock_obj.company_id else None
+        }
     except Exception as e:
-        return str(e)
+        print(f"Error getting stock: {e}")
+        return {'error': str(e)}
 
 @app.route('/api/stocks/<int:stock_id>/close', methods=['GET'])  # Get current price
 def get_stock_close(stock_id):
@@ -153,6 +165,10 @@ def get_stock_data():
                     if data:
                         result.append({'ticker': stock.ticker, 'data': data})
     
+    except Exception as e:
+        print(f"Error getting stock data: {e}")
+        return []
+    
     return result
 
 @app.route('/api/predictions', methods=['GET'])  # Get all predictions
@@ -185,6 +201,9 @@ def get_predictions():
                         'direction': pred.direction,
                         'company_name': company_name
                     })
+    except Exception as e:
+        print(f"Error getting predictions: {e}")
+        return []
     
     return result
 
