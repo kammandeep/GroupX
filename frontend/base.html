@@ -7,22 +7,20 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     </head>
     <body>
-        <div class="layout">
-            <div class="header">
-                <img src="{{ url_for('static'. filename='images/JAK-logo.png')}}" alt="JAK logo">
-                <h1>This is the Header for operation JAK </h1>
-                <h2>Pretty nifty huh? </h2>
-            </div>
-            <aside class="sidebar">
-                <a href="{{ url_for('index') }}">Dashboard</a>
-                <a href="{{ url_for('get_stocks') }}">Get Stocks</a>
-            </aside>
-            <main>
-                {% block content %}{% endblock %}
-            </main>
-            <div class="footer">
-                <h3>This is the foot</h3>
+        <div class="sidebar-container">
+            <img src="{{ url_for('static', filename='images/JAK-logo.png')}}" alt="JAK logo"/>
+            <div class="sidebar-buttons-container">
+                <a class="sidebar-buttons" href="">Home</a>
+                <a class="sidebar-buttons" href="">Stock Search</a>
+                <a class="sidebar-buttons" href="">Stratagey Search</a>
+                <a class="sidebar-buttons" href="">Watchlist</a>
+                <a class="sidebar-buttons" href="">Alerts</a>
+                <a class="sidebar-buttons" href="">Learn</a>
+                <a class="sidebar-buttons" href="">Settings</a>
             </div>
         </div>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
     </body>
 </html>
