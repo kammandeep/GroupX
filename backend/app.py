@@ -56,7 +56,7 @@ def init_db():
 @app.route('/')  # The home page
 def index():
     """Main dashboard HTML"""
-    return render_template('dashboard.html')  # Loads your existing HTML file
+    return render_template('dashboard/dashboard.html')  # Loads your existing HTML file
 
 @app.route('/api/stocks', methods=['GET'])  # Returns stock data as JSON
 def get_stocks():
