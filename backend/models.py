@@ -1,7 +1,7 @@
 # ========================
 # Flask SQLAlchemy Models
 # ========================
-from sqlalchemy import Column, Integer, String, Text, Real, Boolean, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, REAL, Boolean, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import declarative_base
 
 # Base class 
@@ -57,10 +57,10 @@ class StockData(Base):
     id = Column(Integer, primary_key=True)
     ticker = Column(String(10), ForeignKey('stocks.ticker'), nullable=False)  # Reference to stocks table
     date = Column(String(10), nullable=False)                                 # Trading date in YYYY-MM-DD format
-    open = Column(Real, nullable=False)                                       # Opening price
-    high = Column(Real, nullable=False)                                       # Day's highest price
-    low = Column(Real, nullable=False)                                        # Day's lowest price
-    close = Column(Real, nullable=False)                                      # Closing price (most important!)
+    open = Column(REAL, nullable=False)                                       # Opening price
+    high = Column(REAL, nullable=False)                                       # Day's highest price
+    low = Column(REAL, nullable=False)                                        # Day's lowest price
+    close = Column(REAL, nullable=False)                                      # Closing price (most important!)
     volume = Column(Integer, default=0)                                       # Number of shares traded
     created_at = Column(TIMESTAMP, default=None)
 
@@ -73,9 +73,9 @@ class Prediction(Base):
     id = Column(Integer, primary_key=True)
     ticker = Column(String(10), ForeignKey('stocks.ticker'), nullable=False)  # Reference to stocks table
     prediction_date = Column(String(10), nullable=False)                      # Date the model predicted for
-    predicted_close = Column(Real, nullable=False)                            # Predicted closing price
-    actual_close = Column(Real)                                               # Actual price (filled after market closes)
-    confidence_score = Column(Real, default=0.0)                              # Model's confidence (0-1 scale)
+    predicted_close = Column(REAL, nullable=False)                            # Predicted closing price
+    actual_close = Column(REAL)                                               # Actual price (filled after market closes)
+    confidence_score = Column(REAL, default=0.0)                              # Model's confidence (0-1 scale)
     direction = Column(String(20), default='neutral')                         # 'buy', 'sell' or 'hold' recommendation
     prediction_type = Column(String(50), default='daily')                     # Frequency: daily/weekly/monthly
     model_name = Column(String(100), default='baseline')                      # Which ML model created this prediction
@@ -110,8 +110,8 @@ class TradingSignal(Base):
     id = Column(Integer, primary_key=True)
     ticker = Column(String(10), ForeignKey('stocks.ticker'), nullable=False)
     signal_type = Column(String(20), nullable=False)   # 'BUY', 'SELL' or 'HOLD'
-    confidence_score = Column(Real, default=0.0)       # Signal strength (0-1 scale)
-    target_price = Column(Real)                        # Optional price target
+    confidence_score = Column(REAL, default=0.0)       # Signal strength (0-1 scale)
+    target_price = Column(REAL)                        # Optional price target
     model_name = Column(String(100))                   # Which ML model generated this signal
     signal_timestamp = Column(TIMESTAMP, default=None)
 
