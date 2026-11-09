@@ -8,6 +8,8 @@ body {
     display: flex;
     min-height: 100%;
     max-width: 1600px;
+    background: #131313;
+    color: #d8d5d5;
 }
 
 .sidebar-container{
@@ -32,12 +34,18 @@ body {
 
 .sidebar-buttons{
     line-height: 50px;
-    color: #131313;
+    color: #726a6a;
     text-decoration: none;
+    font-weight: bold;
 }
 
 .sidebar-buttons:hover{
-    color: #525151;
+    background: #b6a235;
+    color: #d8d5d5;
+}
+
+.sidebar-buttons:active{
+    background: linear-gradient(to right, #b6a235, #131313);
 }
 
 main{
