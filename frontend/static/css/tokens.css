@@ -1,0 +1,7 @@
+:root {
+  --bg: #0A0A0A; --panel: #0F0F0F; --card: #141414; --card-2: #1C1C1C; --border: #2A2A2A;
+  --gold: #F5C542; --green: #2ECC71; --red: #FF4D4F;
+  --text: #F4F4F2; --muted: #8C8C86;
+  --radius: 10px;
+  --font: Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}

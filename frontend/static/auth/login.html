@@ -1,40 +1,50 @@
 {% extends "base.html" %}
 {% block title %}Log in{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
+
 {% block body %}
 <main class="auth">
-  {% include "brand.html" %}
+  {% include "partials/brand_panel.html" %}
 
-  <section class="panel">
-    <div class="card">
-      <nav class="tabs">
-        <a class="active" href="{{ url_for('login') }}">Log in</a>
-        <a href="{{ url_for('signup') }}">Sign up</a>
+  <section class="auth__panel">
+    <div class="auth__card">
+      <nav class="tabs" aria-label="Log in or sign up">
+        <a class="is-active" href="{{ url_for('auth.login') }}" aria-current="page">Log in</a>
+        <a href="{{ url_for('auth.signup') }}">Sign up</a>
       </nav>
 
       <h1>Welcome back</h1>
-      <p class="muted">Log in to see your strategies and signals.</p>
+      <p class="auth__sub">Log in to see your strategies and signals.</p>
 
-      {% for message in get_flashed_messages() %}<p class="notice">{{ message }}</p>{% endfor %}
-      {% if errors.form %}<p class="error-box">{{ errors.form }}</p>{% endif %}
+      {% include "partials/flash.html" %}
+      {% if errors.form %}<p class="form-error" role="alert">{{ errors.form }}</p>{% endif %}
 
       <form method="post">
-        <div class="field">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field {% if errors.email %}field--error{% endif %}">
           <label for="email">Email</label>
-          <input id="email" name="email" type="email" value="{{ email }}" placeholder="you@email.com" required>
+          <input id="email" name="email" type="email" value="{{ email }}" placeholder="you@email.com"
+                 autocomplete="email" required {% if errors.email %}aria-invalid="true"{% endif %}>
+          {% if errors.email %}<p class="field__msg field__msg--error" role="alert">{{ errors.email }}</p>{% endif %}
         </div>
-        <div class="field">
+
+        <div class="field {% if errors.password %}field--error{% endif %}">
           <label for="password">Password</label>
-          <input id="password" name="password" type="password" placeholder="••••••••••" required>
+          <input id="password" name="password" type="password" placeholder="••••••••••"
+                 autocomplete="current-password" required {% if errors.password %}aria-invalid="true"{% endif %}>
+          {% if errors.password %}<p class="field__msg field__msg--error" role="alert">{{ errors.password }}</p>{% endif %}
         </div>
-        <a class="forgot" href="#">Forgot password?</a>
-        <button class="btn" type="submit">Log in</button>
+
+        <a class="auth__forgot" href="#">Forgot password?</a>
+        <button class="btn btn--primary" type="submit">Log in</button>
       </form>
 
       <div class="divider"><span>or</span></div>
-      <button class="btn btn-google" type="button" disabled title="Coming soon">Continue with Google</button>
+      <button class="btn btn--outline" type="button" disabled title="Coming soon">Continue with Google</button>
 
-      <p class="switch">New here? <a href="{{ url_for('signup') }}">Switch to Sign up.</a> It takes under a minute.</p>
-      <p class="legal">JAK shows signals for learning only. It is not financial advice.</p>
+      <p class="auth__switch">New here? <a href="{{ url_for('auth.signup') }}">Sign up</a></p>
+      <p class="auth__legal">JAK shows signals for learning only. It is not financial advice.</p>
     </div>
   </section>
 </main>
