@@ -1,15 +1,22 @@
-"""
-Connects Flask (web framework) with SQLAlchemy and SQLite schema
-"""
+import os
+import auth
+import db
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, DeclarativeBase
+from models import Base
 
 # ====================================
 # Step 1: Flask App Object
 # ====================================
 app = Flask(__name__)
+
+# Auth #
+
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me") #well set a real key in prod
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+app.register_blueprint(auth.bp) #add the signup, login and logout
 
 # ============================================
 # Step 2: Engine & Base Class
@@ -55,6 +62,7 @@ def init_db():
 # =====================================
 
 @app.route('/')  # The home page
+@auth.login_required #auth for only logegd in users being able to see the dashboard
 def index():
     """Main dashboard HTML"""
     return render_template('dashboard/dashboard.html')  # Loads your existing HTML file
