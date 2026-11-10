@@ -37,9 +37,10 @@ p {
     flex-wrap: wrap;
     gap: 20px;
     flex-direction: row;
+    margin: 20px;
 }
 
-.card{
+.display-card{
     background: #212222;
     padding: 20px;
     box-shadow: 0 2px 5px #2b2a2a;
@@ -77,3 +78,27 @@ p {
     border-radius: 12px;
     opacity: 75%;
 }
+
+.topbar { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    gap: 16px; 
+    flex-wrap: wrap; }
+.topbar h1 { 
+    font-size: 28px; }
+.topbar__user { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    font-size: 14px; 
+    font-weight: 600; }
+.avatar { 
+    width: 40px; 
+    height: 40px; 
+    border-radius: 50%; 
+    background: var(--gold); 
+    color: var(--bg); 
+    display: grid; 
+    place-items: center; 
+    font-weight: 800; }

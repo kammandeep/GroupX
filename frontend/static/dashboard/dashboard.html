@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard | Project JAK{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
+
+{% block content %}
+<main class="dashboard">
+    <header class="topbar">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="muted">Welcome back, {{ g.user.username }}</p>
+      </div>
+      <div class="topbar__user">
+        <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+        <span>{{ g.user.username }}</span>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn--outline btn--small" type="submit">Log out</button>
+        </form>
+      </div>
+    </header>
+<div class="container">
+    <div class="card-container">
+        <div class="display-card">
+            <h2>Card 1</h2>
+            <p>{{ active_strat }}</p>
+        </div>
+        <div class="display-card">
+            <h2>Card 2</h2>
+            <p>{{ signals_today }}</p>
+        </div>
+        <div class="display-card">
+            <h2>Card 3</h2>
+            <p>{{ backtest }}</p>
+        </div>
+        <div class="display-card">
+            <h2>Card 4</h2>
+            <p>{{ watchlist }}</p>
+        </div>
+    </div>
+    <div class="card-container">
+        <div class="mid-card-01">
+            <h2>Card mid 1</h2>
+            <p>Info of Card mid 1</p>
+        </div>
+        <div class="mid-card-02">
+            <h2>Card mid 2</h2>
+            <p>Info of Card mid 2</p>
+        </div>
+    </div>
+    <div class="card-container">
+        <div class="bot-card">
+            <h2>Card bot</h2>
+            <p>Info of Card bot</p>
+        </div>
+    </div>
+</div>
+</main>
+{% endblock %}
