@@ -18,7 +18,7 @@ def dashboard():
     )
     
     watchlist = db.execute(
-        "SELECT symbol, notes FROM watchlist ORDER BY symbol"
+        "SELECT COUNT(*) FROM symbol WHERE status = 'active'"
     )
     
     return render_template(

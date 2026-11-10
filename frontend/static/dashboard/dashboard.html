@@ -39,18 +39,24 @@
     </div>
     <div class="card-container">
         <div class="mid-card-01">
-            <h2>Card mid 1</h2>
+            <h2>NASDAQ-100 vs JAK Momentum Stratagey</h2>
             <p>Info of Card mid 1</p>
         </div>
         <div class="mid-card-02">
-            <h2>Card mid 2</h2>
-            <p>Info of Card mid 2</p>
+            <h2>Today's signals</h2>
+            {% for item in signals %}
+            <p>{{ signals }}</p>
+            {% endfor %}
         </div>
     </div>
     <div class="card-container">
         <div class="bot-card">
-            <h2>Card bot</h2>
-            <p>Info of Card bot</p>
+            <h2>Your watchlist</h2>
+            {% for watched in watchlist %}
+            <p>{{ item.symbol }}</p>
+            {% else %}
+            <p>Nothing currently on your watchlist</p>
+            {% endfor %}
         </div>
     </div>
 </div>
