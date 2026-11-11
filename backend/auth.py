@@ -1,12 +1,15 @@
 import functools
 import re
-import sqlite3
+from datetime import datetime
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
-from db import get_db
-from security import check_csrf
+from .db import get_db
+from .models import User
+from .security import check_csrf
 
 bp = Blueprint("auth", __name__)
 
@@ -22,9 +25,7 @@ def load_logged_in_user():
     user_id = session.get("user_id")
     g.user = None
     if user_id is not None:
-        g.user = get_db().execute(
-            "SELECT id, username, email FROM users WHERE id = ?", (user_id,)
-        ).fetchone()
+        g.user = get_db().get(User, user_id)
         if g.user is None: # account was deleted: drop the stale session
             session.clear()
 
@@ -65,18 +66,21 @@ def signup():
             status = 400
         else:
             db = get_db()
+            user = User(
+                username=username,
+                email=email,
+                password_hash=generate_password_hash(password),
+            )
+            db.add(user)
             try:
-                cur = db.execute(
-                    "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                    (username, email, generate_password_hash(password)),
-                )
                 db.commit()
-            except sqlite3.IntegrityError: # UNIQUE constraint hit
+            except IntegrityError:
+                db.rollback()
                 errors["form"] = "An account with that email or username already exists"
                 status = 409
             else:
                 session.clear()
-                session["user_id"] = cur.lastrowid
+                session["user_id"] = user.id
                 return redirect(url_for("pages.home"))
 
     return render_template("auth/signup.html", username=username, email=email, errors=errors), status
@@ -97,18 +101,18 @@ def login():
         password = request.form.get("password", "")
 
         db = get_db()
-        user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-        hash_to_check = user["password_hash"] if user else DUMMY_HASH
+        user = db.scalar(select(User).where(User.email == email))
+        hash_to_check = user.password_hash if user else DUMMY_HASH
         valid = check_password_hash(hash_to_check, password)
 
-        if user is None or not valid:
+        if user is None or not user.is_active or not valid:
             errors["form"] = "Incorrect email or password"  # same message for both cases
             status = 401
         else:
-            db.execute("UPDATE users SET last_login_at = datetime('now') WHERE id = ?", (user["id"],))
+            user.last_login_at = datetime.now()
             db.commit()
             session.clear()
-            session["user_id"] = user["id"]
+            session["user_id"] = user.id
             return redirect(url_for("pages.home"))
 
     return render_template("auth/login.html", email=email, errors=errors), status

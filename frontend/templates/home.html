@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">{% endblock %}
+
+{% block body %}
+<div class="shell">
+  <aside class="sidebar">
+    <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="JAK" width="120">
+    <nav aria-label="Main">
+      <a class="nav__item is-active" href="{{ url_for('pages.home') }}" aria-current="page">Home</a>
+      <span class="nav__item is-disabled">Stock search</span>
+      <span class="nav__item is-disabled">Strategy search</span>
+      <span class="nav__item is-disabled">Watchlist</span>
+      <span class="nav__item is-disabled">Alerts</span>
+      <span class="nav__item is-disabled">Learn</span>
+      <span class="nav__item is-disabled">Settings</span>
+    </nav>
+    <p class="sidebar__note">Signals are for learning. Not financial advice.</p>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <h1>Home</h1>
+        <p class="muted">Welcome back, {{ g.user.username }}</p>
+      </div>
+      <div class="topbar__user">
+        <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+        <span>{{ g.user.username }}</span>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn--outline btn--small" type="submit">Log out</button>
+        </form>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="Your stats">
+      <article class="card"><p class="muted">Active strategies</p><p class="stat">0</p></article>
+      <article class="card"><p class="muted">Signals today</p><p class="stat stat--gold">0</p></article>
+      <article class="card"><p class="muted">Avg. backtest accuracy</p><p class="stat">&ndash;</p></article>
+      <article class="card"><p class="muted">Watchlist</p><p class="stat">0</p></article>
+    </section>
+
+    <section class="card">
+      <h2>Getting started</h2>
+      <p class="muted">Your stats will fill in once the stock and strategy pages are built.</p>
+    </section>
+  </main>
+</div>
+{% endblock %}

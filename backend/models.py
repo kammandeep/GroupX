@@ -19,6 +19,7 @@ class User(Base):
     password_hash = Column(String(256), nullable=False)          # Hashed password
     created_at = Column(TIMESTAMP, default=None)                 # Database timestamp
     updated_at = Column(TIMESTAMP, default=None)
+    last_login_at = Column(TIMESTAMP, nullable=True)
     is_active = Column(Integer, default=1)                       # 1 = active, 0 = inactive
 
 # =========================

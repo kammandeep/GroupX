@@ -1,276 +1,163 @@
-import os
-import auth
-import db
+from pathlib import Path
 
-from flask import Flask, render_template, request
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, DeclarativeBase
-from models import Base
+from flask import Flask, abort
+from sqlalchemy import func, select
 
-# ====================================
-# Step 1: Flask App Object
-# ====================================
-app = Flask(__name__)
+from . import auth, db, pages, routes
+from .config import Config
+from .models import Company, Prediction, Stock, StockData
+from .security import csrf_token
 
-# Auth #
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+FRONTEND_ROOT = PROJECT_ROOT / "frontend"
 
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me") #well set a real key in prod
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
-app.register_blueprint(auth.bp) #add the signup, login and logout
 
-# ============================================
-# Step 2: Engine & Base Class
-# ============================================
-db_url = 'sqlite:///GroupX.db'
-engine = create_engine(
-    db_url,
-    echo=False  # Set to True to see SQL queries in real-time
-)
+def create_app(test_config=None):
+    app = Flask(
+        __name__,
+        template_folder=str(FRONTEND_ROOT / "templates"),
+        static_folder=str(FRONTEND_ROOT / "static"),
+    )
+    app.config.from_object(Config)
+    if test_config:
+        app.config.update(test_config)
 
-Base = DeclarativeBase()  # Base class for all model classes
+    db.init_app(app)
+    app.register_blueprint(auth.bp)
+    app.register_blueprint(routes.auth_bp)
+    app.register_blueprint(pages.bp)
+    app.context_processor(lambda: {"csrf_token": csrf_token})
 
-# ============================================
-# Step 3: Import Model Classes from models.py
-# ============================================
-from models import User, Company, Stock, StockData, Prediction, UserWatchlist, WatchlistItem, TradingSignal
-from database.seed_data import populate_sample_data
+    @app.get("/api/stocks")
+    def get_stocks():
+        session = db.get_db()
+        stocks = session.execute(
+            select(Stock, Company.name)
+            .join(Company, Company.id == Stock.company_id)
+            .order_by(Stock.ticker)
+        ).all()
+        return [
+            {
+                "id": stock.id,
+                "ticker": stock.ticker,
+                "company_name": company_name,
+                "exchange_code": stock.exchange_code,
+                "current_price": session.scalar(
+                    select(StockData.close)
+                    .where(StockData.ticker == stock.ticker)
+                    .order_by(StockData.date.desc())
+                    .limit(1)
+                ),
+            }
+            for stock, company_name in stocks
+        ]
 
-# Helper function to get any model class by name
-def get_model_class(model_name):
-    return {m.__name__: m for m in [
-        User, Company, Stock, StockData, Prediction, 
-        UserWatchlist, WatchlistItem, TradingSignal
-    ]}.get(model_name)
-
-# ========================================================
-# Step 4: Initialize Database (create tables + load data)
-# ========================================================
-def init_db():
-    """Creates all database tables from model classes and loads seed data"""
-    print("Initializing database...")
-    
-    with Session(engine) as session:
-        Base.metadata.create_all(bind=engine)  # Creates tables automatically!
-        
-        from database.seed_data import populate_sample_data
-        populate_sample_data(session)
-    
-    print(f"✓ Database initialized: {db_url}")
-
-# =====================================
-# Step 5: Define Routes (URL Handlers)
-# =====================================
-
-@app.route('/')  # The home page
-@auth.login_required #auth for only logegd in users being able to see the dashboard
-def index():
-    """Main dashboard HTML"""
-    return render_template('dashboard/dashboard.html')  # Loads your existing HTML file
-
-@app.route('/api/stocks', methods=['GET'])  # Returns stock data as JSON
-def get_stocks():
-    """Gets all stocks and returns them as JSON for frontend"""
-    try:
-        with Session(engine) as session:
-            companies = Company.query.all()
-            model_classes = {m.__name__: m for m in [Company, Stock]}
-            
-            result = []
-            for company in companies:
-                model = model_classes.get(company.__class__.__name__, Stock)
-                stocks = model.query.filter_by(company_id=company.id).all()
-                
-                for stock in stocks:
-                    result.append({
-                        'id': stock.id,
-                        'ticker': stock.ticker,
-                        'company_name': company.name,
-                        'exchange_code': stock.exchange_code,
-                        'current_price': get_latest_close(stock)
-                    })
-    
-    except Exception as e:
-        print(f"Error getting stocks: {e}")
-        return []
-    
-    return result
-
-@app.route('/api/stocks/<int:stock_id>', methods=['GET'])  # Get specific stock info
-def get_stock(stock_id):
-    """Getting specific stock's information"""
-    Stock = get_model_class('Stock')
-    try:
-        with Session(engine) as session:
-            stock_obj = Stock.query.get_or_404(stock_id)
+    @app.get("/api/stocks/<int:stock_id>")
+    def get_stock(stock_id):
+        session = db.get_db()
+        stock = session.get(Stock, stock_id)
+        if stock is None:
+            abort(404)
+        company = session.get(Company, stock.company_id)
         return {
-            'id': stock_obj.id,
-            'ticker': stock_obj.ticker,
-            'company_name': Company.query.get(stock_obj.company_id).name if stock_obj.company_id else None
+            "id": stock.id,
+            "ticker": stock.ticker,
+            "company_name": company.name if company else None,
         }
-    except Exception as e:
-        print(f"Error getting stock: {e}")
-        return {'error': str(e)}
 
-@app.route('/api/stocks/<int:stock_id>/close', methods=['GET'])  # Get current price
-def get_stock_close(stock_id):
-    """Getting the latest closing price for a stock"""
-    StockData = get_model_class('StockData')
-    
-    try:
-        with Session(engine) as session:
-            model_classes = {m.__name__: m for m in [Company, Stock, StockData]}
-            
-            company_obj = Company.query.get(stock_id)
-            if not company_obj:
-                return None
-            
-            company_model = model_classes.get(company_obj.__class__.__name__, Stock)
-            stock = company_model.query.get(stock_id)
-            if not stock:
-                return None
-            
-            latest_prices = StockData.query.filter_by(ticker=stock.ticker).order_by(
-                StockData.date.desc()
-            ).first()
-            
-            return {'price': latest_prices.close if latest_prices else 0}
-    except Exception as e:
-        print(f"Error getting stock close: {e}")
-        return None
+    @app.get("/api/stocks/<int:stock_id>/close")
+    def get_stock_close(stock_id):
+        session = db.get_db()
+        stock = session.get(Stock, stock_id)
+        if stock is None:
+            abort(404)
+        price = session.scalar(
+            select(StockData.close)
+            .where(StockData.ticker == stock.ticker)
+            .order_by(StockData.date.desc())
+            .limit(1)
+        )
+        return {"price": price}
 
-@app.route('/api/stock-data', methods=['GET'])  # Get recent price history
-def get_stock_data():
-    """Returns recent OHLCV data for all stocks"""
-    StockData = get_model_class('StockData')
-    
-    try:
-        with Session(engine) as session:
-            model_classes = {m.__name__: m for m in [Company, Stock, StockData]}
-            
-            company_objs = Company.query.all()
-            result = []
-            
-            for company in company_objs:
-                company_model = model_classes.get(company.__class__.__name__, Stock)
-                stocks = company_model.query.filter_by(company_id=company.id).all()
-                
-                for stock in stocks:
-                    latest_prices = StockData.query.filter_by(ticker=stock.ticker).order_by(
-                        StockData.date.desc()
-                    ).limit(7).all()  # Get last 7 days
-                    
-                    data = []
-                    for price in latest_prices:
-                        data.append({
-                            'date': price.date,
-                            'open': round(price.open, 2),
-                            'high': round(price.high, 2),
-                            'low': round(price.low, 2),
-                            'close': round(price.close, 2),
-                            'volume': price.volume
-                        })
-                    
-                    if data:
-                        result.append({'ticker': stock.ticker, 'data': data})
-    
-    except Exception as e:
-        print(f"Error getting stock data: {e}")
-        return []
-    
-    return result
-
-@app.route('/api/predictions', methods=['GET'])  # Get all predictions
-def get_predictions():
-    """Returns recent model predictions"""
-    Prediction = get_model_class('Prediction')
-    
-    try:
-        with Session(engine) as session:
-            model_classes = {m.__name__: m for m in [Company, Stock, Prediction]}
-            
-            preds = Prediction.query.all()
-            result = []
-            
-            for pred in preds:
-                stock = get_model_class('Stock').query.get(pred.ticker)
-                if stock and model_classes.get(stock.__class__.__name__, Stock):
-                    company_obj = StockData  # Using stock's company_id
-                    company_name = None
-                    if company_obj.company_id:
-                        company_obj = Company.query.get(company_obj.company_id)
-                        company_name = company_obj.name if company_obj else "Unknown"
-                    
-                    result.append({
-                        'ticker': pred.ticker,
-                        'prediction_date': pred.prediction_date,
-                        'predicted_close': pred.predicted_close,
-                        'actual_close': pred.actual_close,
-                        'confidence_score': pred.confidence_score,
-                        'direction': pred.direction,
-                        'company_name': company_name
-                    })
-    except Exception as e:
-        print(f"Error getting predictions: {e}")
-        return []
-    
-    return result
-
-@app.route('/api/companies', methods=['GET'])  # Get all companies
-def get_companies():
-    """Returns list of all companies"""
-    Company = get_model_class('Company')
-    
-    with Session(engine) as session:
-        companies = Company.query.all()
+    @app.get("/api/stock-data")
+    def get_stock_data():
+        session = db.get_db()
+        stocks = session.scalars(select(Stock).order_by(Stock.ticker)).all()
         result = []
-        
-        for company in companies:
-            stock = Stock.query.filter_by(company_id=company.id).first()
-            
-            result.append({
-                'id': company.id,
-                'name': company.name,
-                'sector': company.sector,
-                'industry': company.industry,
-                'website': company.website
-            })
-    
-    return result
+        for stock in stocks:
+            prices = session.scalars(
+                select(StockData)
+                .where(StockData.ticker == stock.ticker)
+                .order_by(StockData.date.desc())
+                .limit(7)
+            ).all()
+            if prices:
+                result.append(
+                    {
+                        "ticker": stock.ticker,
+                        "data": [
+                            {
+                                "date": price.date,
+                                "open": round(price.open, 2),
+                                "high": round(price.high, 2),
+                                "low": round(price.low, 2),
+                                "close": round(price.close, 2),
+                                "volume": price.volume,
+                            }
+                            for price in prices
+                        ],
+                    }
+                )
+        return result
 
-@app.route('/health', methods=['GET'])  # Health check endpoint
-def health():
-    """Simple API to check if app is running"""
-    try:
-        with Session(engine) as session:
-            count = Company.query.count()
-            return {'status': 'healthy', 'companies_count': count}
-    except Exception as e:
-        return {'status': 'unhealthy', 'error': str(e)}
+    @app.get("/api/predictions")
+    def get_predictions():
+        session = db.get_db()
+        predictions = session.execute(
+            select(Prediction, Company.name)
+            .join(Stock, Stock.ticker == Prediction.ticker)
+            .join(Company, Company.id == Stock.company_id)
+            .order_by(Prediction.prediction_date.desc())
+        ).all()
+        return [
+            {
+                "ticker": prediction.ticker,
+                "prediction_date": prediction.prediction_date,
+                "predicted_close": prediction.predicted_close,
+                "actual_close": prediction.actual_close,
+                "confidence_score": prediction.confidence_score,
+                "direction": prediction.direction,
+                "company_name": company_name,
+            }
+            for prediction, company_name in predictions
+        ]
 
-# =================
-# Helper Functions
-# =================
-def get_latest_close(stock):
-    """Getting the latest closing price for a stock"""
-    StockData = get_model_class('StockData')
-    
-    company_obj = Stock.query.get(stock.company_id)
-    if not company_obj:
-        return None
-    
-    from models import StockData
-    latest_prices = StockData.query.filter_by(ticker=stock.ticker).order_by(
-        StockData.date.desc()
-    ).first()
-    
-    return latest_prices.close if latest_prices else 0
+    @app.get("/api/companies")
+    def get_companies():
+        companies = db.get_db().scalars(
+            select(Company).order_by(Company.name)
+        ).all()
+        return [
+            {
+                "id": company.id,
+                "name": company.name,
+                "sector": company.sector,
+                "industry": company.industry,
+                "website": company.website,
+            }
+            for company in companies
+        ]
 
-# ====================
-# Run the Application
-# ====================
-if __name__ == '__main__':
-    # Initialize database (create tables + load sample data)
-    init_db()
-    
-    print("Starting Flask application...")
-    app.run(debug=True, use_reloader=False)  # debug=True for error messages
+    @app.get("/health")
+    def health():
+        company_count = db.get_db().scalar(select(func.count()).select_from(Company))
+        return {"status": "healthy", "companies_count": company_count}
+
+    return app
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
