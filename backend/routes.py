@@ -1,12 +1,12 @@
 import re
 from flask import Blueprint, request, session, jsonify
 from sqlalchemy import select, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
-from db import engine
-from models import User
+from .db import get_db
+from .models import User
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+auth_bp = Blueprint("api_auth", __name__, url_prefix="/api/auth")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 def user_json(u):
@@ -25,27 +25,34 @@ def register():
     if len(password) < 8: errors["password"] = "Use at least 8 characters"
     if errors: return jsonify(errors=errors), 400
 
-    with Session(engine) as db:
-        taken = db.scalar(select(User).where(or_(User.email == email, User.username == username)))
-        if taken:
-            return jsonify(errors={"email": "Those details are already in use"}), 409
-        user = User(username=username, email=email,
-                    password_hash=generate_password_hash(password))
-        db.add(user); db.commit()
-        session.clear(); session["user_id"] = user.id
-        return jsonify(user=user_json(user)), 201
+    db = get_db()
+    taken = db.scalar(select(User).where(or_(User.email == email, User.username == username)))
+    if taken:
+        return jsonify(errors={"email": "Those details are already in use"}), 409
+    user = User(username=username, email=email,
+                password_hash=generate_password_hash(password))
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return jsonify(errors={"email": "Those details are already in use"}), 409
+    session.clear()
+    session["user_id"] = user.id
+    return jsonify(user=user_json(user)), 201
 
 @auth_bp.post("/login")
 def login():
     d = request.get_json(silent=True) or {}
     email = (d.get("email") or "").strip().lower()
     password = d.get("password") or ""
-    with Session(engine) as db:
-        user = db.scalar(select(User).where(User.email == email))
-        if not user or not user.is_active or not check_password_hash(user.password_hash, password):
-            return jsonify(errors={"form": "Incorrect email or password"}), 401
-        session.clear(); session["user_id"] = user.id
-        return jsonify(user=user_json(user))
+    db = get_db()
+    user = db.scalar(select(User).where(User.email == email))
+    if not user or not user.is_active or not check_password_hash(user.password_hash, password):
+        return jsonify(errors={"form": "Incorrect email or password"}), 401
+    session.clear()
+    session["user_id"] = user.id
+    return jsonify(user=user_json(user))
 
 @auth_bp.post("/logout")
 def logout():
@@ -56,6 +63,5 @@ def logout():
 def me():
     uid = session.get("user_id")
     if not uid: return jsonify(user=None), 401
-    with Session(engine) as db:
-        user = db.get(User, uid)
-        return (jsonify(user=user_json(user)), 200) if user else (jsonify(user=None), 401)
+    user = get_db().get(User, uid)
+    return (jsonify(user=user_json(user)), 200) if user else (jsonify(user=None), 401)
