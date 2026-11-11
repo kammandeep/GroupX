@@ -1,4 +1,4 @@
-body {
+/* body {
     margin: 0 auto;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     display: flex;
@@ -6,7 +6,7 @@ body {
     max-width: 1600px;
     background: #131313;
     color: var(--text);
-}
+} */
 
 h1 {
     color: var(--text);
@@ -24,13 +24,13 @@ h2 {
     font-weight: bold;
 }
 
-p {
+/* p {
     color: var(--text);
     text-align: left;
     font-size: .75rem;
     margin-top: 40px;
     font-weight: bold;
-}
+} */
 
 .card-container{
     display: flex;
@@ -62,7 +62,7 @@ p {
 }
 
 .mid-card-02{
-    background: #212222;
+    background: var(--card);
     flex: 2;
     padding: 20px;
     box-shadow: 0 2px 5px #2b2a2a;
@@ -71,9 +71,76 @@ p {
     border: var(--border);
 }
 
-.mid-card-02-insert{
-    background: var(--card);
+.mid-card-01-chart-wrap{
+    position: relative;
+    min-height: 300px;
+}
 
+.mid-card-02-wrap{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mid-card-02-insert{
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 24px;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.mid-card-02-insert--symbol{
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.mid-card-02-insert--name{
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.mid-card-02-insert--acc{
+    text-align: right;
+}
+
+.mid-card-02-insert--acc-val{
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.mid-card-02-insert--acc-lab{
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.mid-card-02-pill{
+    min-width: 56px;
+    text-align: center;
+    padding: 6px 16px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    border-radius: 999px;
+}
+
+.mid-card-02-pill--buy{
+    background: #2ecc712e;
+    color: var(--green);
+}
+
+.mid-card-02-pill--hold{
+    background-color: #f5c5422e;
+    color: var(--gold);
+}
+
+.mid-card-02-pill--sell{
+    background: #ff4d4f2e;
+    color: var(--red);
 }
 
 .bot-card{
