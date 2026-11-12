@@ -153,6 +153,66 @@ h2 {
     border: var(--border);
 }
 
+.bot-card-head{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.link-gold{
+    color: var(--gold);
+    font-size: .75rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.watch-table{
+    overflow-x: auto;
+}
+
+.watch-row{
+    display: grid;
+    grid-template-columns: 2fr, 1fr, 1fr, 1.5fr, 1fr;
+    align-items: center;
+    gap: 16px;
+    min-width: 600px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+    font-size: .85rem;
+}
+
+.watch-row--head{
+    border-top: none;
+    padding-top: 8px;
+    color: var(--muted);
+    font-size: .75rem;
+}
+
+.watch-symbol{
+    font-weight: 700;
+    color: var(--text);
+    margin-right: 12px;
+}
+
+.watch-name{
+    color: var(--muted);
+}
+
+.up{ 
+    color: var(--green);
+    font-weight: 700;
+}
+
+.down{
+    color: var(--red);
+    font-weight: 700;
+}
+
+.watch-empty{
+    padding: 14px 0;
+    color: var(--muted);
+}
+
 .topbar { 
     display: flex; 
     justify-content: space-between; 
