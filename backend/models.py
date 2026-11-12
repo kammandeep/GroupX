@@ -22,6 +22,19 @@ class User(Base):
     last_login_at = Column(TIMESTAMP, nullable=True)
     is_active = Column(Integer, default=1)                       # 1 = active, 0 = inactive
 
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    experience_level = Column(String(20), default="beginner", nullable=False)
+    risk_comfort = Column(String(20), default="medium", nullable=False)
+    signal_alerts = Column(Boolean, default=True, nullable=False)
+    daily_summary = Column(Boolean, default=True, nullable=False)
+    strategy_updates = Column(Boolean, default=False, nullable=False)
+
+
 # =========================
 # SECTION 2: COMPANY MODEL
 # =========================
