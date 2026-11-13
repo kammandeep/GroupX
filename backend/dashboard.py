@@ -3,10 +3,12 @@ from sqlalchemy import select, func
 from . import db
 from datetime import date
 from .models import ( Company, Stock, StockData, Prediction, UserWatchlist, WatchlistItem, TradingSignal)
+from .auth import login_required
 
 bp = Blueprint('dashboard', __name__)
 
 @bp.route('/dashboard')
+@login_required
 def dashboard():
     
     if g.user is None:
@@ -22,9 +24,13 @@ def dashboard():
         select(func.count()).select_from(TradingSignal).where(func.date(TradingSignal.signal_timestamp) == date.today().isoformat())
     ) or 0
     
-    backtest = db.execute(
-        "SELECT AVG(accuracy) FROM backtests"
-    ).fetchone()[0]
+    avg_err = session.scalar(
+        select(func.avg(
+            func.abs(Prediction.predicted_close - Prediction.actual_close) / Prediction.actual_close
+        )).where(Prediction.actual_close.is_not(None))
+    )
+    
+    backtest = round((1 - avg_err) * 100, 1) if avg_err is not None else 0
     
     held = session.execute(
         select(WatchlistItem.ticker, Company.name).join(UserWatchlist, UserWatchlist.id == WatchlistItem.watchlist_id).join(Stock, Stock.ticker == WatchlistItem.ticker).join(Company, Company.id == Stock.company_id).where(UserWatchlist.user_id == g.user.id).distinct()
@@ -56,27 +62,36 @@ def dashboard():
         select(TradingSignal, Company.name).join(Stock, Stock.ticker == TradingSignal.ticker).join(Company, Company.id == Stock.company_id).order_by(TradingSignal.signal_timestamp.desc()).limit(5)
     ).all()
     
-    signals = session.execute(
-        "SELECT symbol, company_name, accuracy, signal_type "
-        "FROM signals WHERE date(created_at) = date('now')"
-        "ORDER BY created_at DESC LIMIT 5"
-    ).fetchall()
+    signals = [
+        {
+        "symbol":s.ticker,
+        "name":company_name,
+        "accuracy": (s.confidence_score or 0)*100,
+        "signal_type": s.signal_type,
+        }
+        for s, company_name in sig_rows
+    ]
     
-    rows = db.execute(
-        "SELECT date, actual, predicted FROM results ORDER BY date"
-    ).fetchall()
+    #======================================
+    # CHART SECTION
+    #======================================
     
-    chart_label = [r["date"] for r in rows]
-    chart_actual = [r["actual"] for r in rows]
-    chart_pred = [r["predicted"] for r in rows]
+    chart_ticker = (watchlists[0]["symbol"] if watchlists else session.scalar(select(Prediction.ticker).limit(1)))
+    preds = session.scalars(
+        select(Prediction).where(Prediction.ticker == chart_ticker, Prediction.actual_close.is_not(None)).order_by(Prediction.prediction_date)
+    ).all()
+    
+
     
     return render_template(
         'dashboard.html',
         active_strat=active_strat,
         signals_today=signals_today,
         backtest=backtest,
-        watchlist=watchlist,
+        watchlists=watchlists,
         watchlist_count=watchlist_count,
         signals=signals,
-        rows=rows
+        chart_labels = [p.prediction_date for p in preds],
+        chart_actual = [p.actual_close for p in preds],
+        chart_predicted = [p.predicted_close for p in preds]
         )
