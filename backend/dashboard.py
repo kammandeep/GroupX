@@ -1,25 +1,38 @@
-from flask import Flask, render_template, Blueprint
+from flask import render_template, Blueprint, g, redirect, url_for
+from sqlalchemy import select, func
+from . import db
+from datetime import date
+from .models import ( Company, Stock, StockData, Prediction, UserWatchlist, WatchlistItem, TradingSignal)
 
 bp = Blueprint('dashboard', __name__)
 
+@bp.route('/dashboard')
 def dashboard():
-    db = get_db() #replace with actual database get function
     
-    active_strat = db.execute(
-        "SELECT COUNT(*) FROM strategies WHERE status = 'active'"
-    ).fetchone()[0]
+    if g.user is None:
+        return redirect(url_for('auth.login'))
     
-    signals_today = db.execute(
-        "SELECT COUNT(*) FROM signals WHERE date(created_at) = date('now')"
-    ).fetchone()[0]
+    session = db.get_db()
+    
+    active_strat = session.scalar(
+        select(func.count(func.distinct(TradingSignal.model_name)))
+    ) or 0
+    
+    signals_today = session.scalar(
+        select(func.count()).select_from(TradingSignal).where(func.date(TradingSignal.signal_timestamp) == date.today().isoformat())
+    ) or 0
     
     backtest = db.execute(
         "SELECT AVG(accuracy) FROM backtests"
     ).fetchone()[0]
     
+    held = session.execute(
+        select(WatchlistItem.ticker, Company.name).join(UserWatchlist, UserWatchlist.id == WatchlistItem.watchlist_id).join(Stock, Stock.ticker == WatchlistItem.ticker).join(Company, Company.id == Stock.company_id).where(UserWatchlist.user_id == g.user.id).distinct()
+    ).all()
+    
     watchlist = db.execute(
-        "SELECT COUNT(*) FROM symbol WHERE status = 'active'"
-    ).fetchall()
+                "SELECT symbol, name, signal AS signal_type, close AS price, change_pct, best_strategy FROM watchlist WHERE status = 'active'"
+            ).fetchall()
     
     signals = db.execute(
         "SELECT symbol, company_name, accuracy, signal_type "
@@ -41,6 +54,7 @@ def dashboard():
         signals_today=signals_today,
         backtest=backtest,
         watchlist=watchlist,
+        watchlist_count=watchlist_count,
         signals=signals,
         rows=rows
-    )
+        )
