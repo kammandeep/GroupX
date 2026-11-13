@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/alerts.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="shell">
+  <aside class="sidebar">
+    <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="JAK" width="120">
+    <nav aria-label="Main">
+      <a class="nav__item" href="{{ url_for('pages.home') }}">Home</a>
+      <span class="nav__item is-disabled">Stock search</span>
+      <span class="nav__item is-disabled">Strategy search</span>
+      <span class="nav__item is-disabled">Watchlist</span>
+      <a class="nav__item is-active" href="{{ url_for('pages.alerts') }}" aria-current="page">Alerts</a>
+      <span class="nav__item is-disabled">Learn</span>
+      <a class="nav__item" href="{{ url_for('pages.settings') }}">Settings</a>
+    </nav>
+    <p class="sidebar__note">Signals are for learning. Not financial advice.</p>
+  </aside>
+
+  <main class="content alerts-content">
+    <header class="topbar">
+      <div>
+        <h1>Alerts</h1>
+        <p class="muted">Get told when a signal changes. JAK never places trades.</p>
+      </div>
+      <div class="alerts-topbar">
+        <label class="search" aria-label="Search ticker or strategy">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Search ticker or strategy">
+        </label>
+        <div class="topbar__user">
+          <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+          <span>{{ g.user.username }}</span>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn--outline btn--small" type="submit">Log out</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <nav class="alert-tabs" aria-label="Alert filters">
+      <a class="{{ 'is-active' if not unread_only else '' }}" href="{{ url_for('pages.alerts') }}">All</a>
+      <a class="{{ 'is-active' if unread_only else '' }}" href="{{ url_for('pages.alerts', filter='unread') }}">Unread</a>
+      <a href="#active-rules">Rules</a>
+    </nav>
+
+    <div class="alerts-layout">
+      <section class="alert-feed" aria-label="Alert activity">
+        {% for item in alert_items %}
+        <article class="alert-item">
+          <span class="alert-dot alert-dot--{{ item.tone }}{% if not item.is_read %} is-unread{% endif %}" aria-hidden="true"></span>
+          <div class="alert-item__body">
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.detail }}</p>
+          </div>
+          <time>{{ item.created_at }}</time>
+          {% if not item.is_read %}
+          <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="read">
+            <input type="hidden" name="event_id" value="{{ item.id }}">
+            <button class="read-alert" type="submit">Mark read</button>
+          </form>
+          {% endif %}
+        </article>
+        {% else %}
+        <div class="alert-empty">
+          <strong>No alerts yet</strong>
+          <p>New signal changes will appear here when they are generated.</p>
+        </div>
+        {% endfor %}
+        {% if alert_items and unread_only %}
+        <form class="mark-all-form" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="read_all">
+          <button class="delete-rule" type="submit">Mark all read</button>
+        </form>
+        {% endif %}
+      </section>
+
+      <aside class="alerts-side">
+        <section class="alert-card">
+          <h2>New alert rule</h2>
+          {% if errors.form %}<p class="form-error">{{ errors.form }}</p>{% endif %}
+          <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="field{% if errors.ticker %} field--error{% endif %}">
+              <label for="ticker">Stock</label>
+              <input id="ticker" name="ticker" value="{{ form.get('ticker', '') }}" placeholder="NVDA" required>
+              {% if errors.ticker %}<p class="field__msg field__msg--error">{{ errors.ticker }}</p>{% endif %}
+            </div>
+            <div class="field{% if errors.condition %} field--error{% endif %}">
+              <label for="condition">Tell me when</label>
+              <input id="condition" name="condition" value="{{ form.get('condition', '') }}" placeholder="Signal changes to BUY or SELL" required>
+              {% if errors.condition %}<p class="field__msg field__msg--error">{{ errors.condition }}</p>{% endif %}
+            </div>
+            <fieldset class="destination">
+              <legend>Send to</legend>
+              <label><input type="radio" name="destination" value="app" {% if form.get('destination', 'app') == 'app' %}checked{% endif %}>App</label>
+              <label><input type="radio" name="destination" value="email" {% if form.get('destination') == 'email' %}checked{% endif %}>Email</label>
+            </fieldset>
+            <button class="btn btn--primary" type="submit">Save alert</button>
+          </form>
+        </section>
+
+        <section class="alert-card" id="active-rules">
+          <h2>Active rules</h2>
+          {% for rule in rules %}
+          <form class="rule-row" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="rule_id" value="{{ rule.id }}">
+            <span>{{ rule.ticker }} · {{ rule.condition }}</span>
+            <span class="rule-actions">
+              <button class="toggle{% if not rule.enabled %} is-off{% endif %}" type="submit" name="action" value="toggle" aria-label="Toggle {{ rule.ticker }} alert" aria-pressed="{{ 'true' if rule.enabled else 'false' }}"></button>
+              <button class="delete-rule" type="submit" name="action" value="delete" aria-label="Delete {{ rule.ticker }} alert">Delete</button>
+            </span>
+          </form>
+          {% else %}
+          <p class="muted">No alert rules yet.</p>
+          {% endfor %}
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+{% endblock %}

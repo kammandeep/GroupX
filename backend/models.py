@@ -1,7 +1,18 @@
 # ========================
 # Flask SQLAlchemy Models
 # ========================
-from sqlalchemy import Column, Integer, String, Text, REAL, Boolean, TIMESTAMP, ForeignKey
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    REAL,
+    String,
+    Text,
+    TIMESTAMP,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import declarative_base
 
 # Base class 
@@ -33,6 +44,34 @@ class UserSettings(Base):
     signal_alerts = Column(Boolean, default=True, nullable=False)
     daily_summary = Column(Boolean, default=True, nullable=False)
     strategy_updates = Column(Boolean, default=False, nullable=False)
+
+
+class AlertRule(Base):
+    __tablename__ = "alert_rules"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    ticker = Column(String(10), nullable=False)
+    condition = Column(String(100), nullable=False)
+    destination = Column(String(20), default="app", nullable=False)
+    enabled = Column(Boolean, default=True, nullable=False)
+
+
+class AlertEvent(Base):
+    __tablename__ = "alert_events"
+    __table_args__ = (
+        UniqueConstraint("rule_id", "signal_id", name="uq_alert_event_rule_signal"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    rule_id = Column(Integer, ForeignKey("alert_rules.id"), nullable=False)
+    signal_id = Column(Integer, ForeignKey("trading_signals.id"), nullable=False)
+    title = Column(String(160), nullable=False)
+    detail = Column(String(255), nullable=False)
+    tone = Column(String(20), nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, nullable=False)
 
 
 # =========================
