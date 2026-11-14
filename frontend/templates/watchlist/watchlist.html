@@ -6,7 +6,7 @@
 <div class="watchlist">
     <header class="topbar">
       <div>
-        <h1>Dashboard</h1>
+        <h1>Watchlist</h1>
         <p class="muted">Welcome back, {{ g.user.username }}</p>
       </div>
       <div class="topbar__user">
@@ -18,3 +18,41 @@
         </form>
       </div>
     </header>
+  
+    <div class="container">
+      <div class="card-container">
+        <div class="bot-card">
+            <div class="bot-card-head">
+                <h2>Your watchlist</h2>
+                <a class="link-gold" href="">View all </a>
+            </div>
+
+        <div class="watch-table">
+            <div class="watch-row watch-row--head">
+                <span>Stock</span>
+                <span>Price</span>
+                <span>Today</span>
+                <span>Best Strategy</span>
+                <span>Signal</span>
+            </div>
+
+            {% for stock in watchlists %}
+                <div class="watch-row">
+                    <div>
+                        <span class="watch-symbol">{{ stock.symbol }}</span>
+                        <span class="watch-name">{{ stock.name }}</span>
+                    </div>
+                    <span>${{  "%.2f"|format(stock.price) }}</span>
+                    <span class="{{ 'up' if stock.change_pct >= 0 else 'down' }}">
+                        {{ "%+.1f|format(stock.change_pct)" }}%
+                    </span>
+                    <span>{{ stock.best_strategy }}</span>
+                    <span><span class="mid-card-02-pill pill--{{ stock.signal_type|lower }}">{{ stock.signal_type|upper }}</span></span>
+                </div>
+            {% else %}
+            <p>Nothing currently on your watchlist</p>
+            {% endfor %}
+        </div>
+    </div>
+    </div>
+</div>
