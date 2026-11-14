@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from backend.app import app
 from backend.db import get_db
-from backend.models import Company, Prediction, Stock, StockData
+from backend.models import Company, Prediction, Stock, StockData, Strategy, TradingSignal
 
 DATES = (
     "2024-01-05",
@@ -63,12 +63,24 @@ SAMPLE_PRICES = {
 }
 
 SAMPLE_PREDICTIONS = (
-    ("AAPL", 68.50, 67.90, 0.82, "buy"),
-    ("TSLA", 225.00, 230.20, 0.75, "hold"),
-    ("MSFT", 402.80, 398.50, 0.88, "buy"),
-    ("AMZN", 162.40, 158.20, 0.71, "hold"),
+    ("AAPL", 68.50, 67.90, 0.82, "up"),
+    ("TSLA", 225.00, 230.20, 0.75, "flat"),
+    ("MSFT", 402.80, 398.50, 0.88, "up"),
+    ("AMZN", 162.40, 158.20, 0.71, "flat"),
 )
 
+#can add more sample strategies here with the name/description/model
+SAMPLE_STRATEGIES = (
+    ("Momentum", "Buys stocks the models expects to keep rising, sells one that is expectect to continue falling.", "XGBoost"), ("Mean Reversion", "Looks for the stocks that have moved too far, too fast and may swing back.", "LSTM"),
+)
+
+#ticker/strategy name/signal/ confidence
+SAMPLE_SIGNALS = (
+    ("AAPL", "Momentum", "BUY", 0.82), ("AAPL", "Mean reversion", "HOLD", 0.55),
+    ("TSLA", "Momentum", "HOLD", 0.75), ("TSLA", "Mean reversion", "BUY", 0.68),
+    ("MSFT", "Momentum", "BUY", 0.88), ("MSFT", "Mean reversion", "SELL", 0.61),
+    ("AMZN", "Momentum", "SELL", 0.71), ("AMZN", "Mean reversion", "HOLD", 0.58),
+)
 
 def populate_sample_data(session):
     companies = {
@@ -140,6 +152,22 @@ def populate_sample_data(session):
                     direction=direction,
                 )
             )
+
+    strategies = {st.name: st for st in session.scalars(select(Strategy)).all()}
+    for name, description, model_name in SAMPLE_STRATEGIES:
+        if name not in strategies:
+            strategies[name] = Strategy(name=name, description=description, model_name=model_name)
+            session.add(strategies[name])
+    session.flush()
+
+    existing_signals = set(session.execute(
+        select(TradingSignal.ticker, TradingSignal.strategy_id).where(TradingSignal.signal_date == DATES[-1])
+    ).all())
+    for ticker, strategy_name, signal, confidence in SAMPLE_SIGNALS:
+        strategy = strategies[strategy_name]
+        if (ticker, strategy.id) not in existing_signals:
+            session.add(TradingSignal(ticker=ticker, strategy_id=strategy.id, signal_date=DATES[-1],
+                                      signal_type=signal, confidence_score=confidence, model_name=strategy.model_name))
     session.commit()
 
 
