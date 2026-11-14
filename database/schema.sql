@@ -1,3 +1,6 @@
+-- REFERENCE ONLY DO NOT UPDATE TO CREATE ANY TABLES
+-- MODELS.PY IS THE CORRECT FILE FOR CREATION OF TABLES
+
 -- ====================================================
 -- STOCK PREDICTION DASHBOARD - SQLite Database Schema
 -- ====================================================
