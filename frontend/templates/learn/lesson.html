@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/learn.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="shell">
+  <aside class="sidebar">
+    <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="JAK" width="120">
+    <nav aria-label="Main">
+      <a class="nav__item" href="{{ url_for('pages.home') }}">Home</a>
+      <span class="nav__item is-disabled">Stock search</span>
+      <span class="nav__item is-disabled">Strategy search</span>
+      <span class="nav__item is-disabled">Watchlist</span>
+      <a class="nav__item" href="{{ url_for('pages.alerts') }}">Alerts</a>
+      <a class="nav__item is-active" href="{{ url_for('pages.learn') }}" aria-current="page">Learn</a>
+      <a class="nav__item" href="{{ url_for('pages.settings') }}">Settings</a>
+    </nav>
+    <p class="sidebar__note">Signals are for learning. Not financial advice.</p>
+  </aside>
+
+  <main class="content learn-content">
+    <a class="learn-back" href="{{ url_for('pages.learn') }}">← Back to Learn</a>
+    <article class="lesson-detail">
+      <p class="learn-eyebrow">Beginner guide · {{ lesson.read_time }} min read</p>
+      <h1>{{ lesson.title }}</h1>
+      <p class="lesson-detail__summary">{{ lesson.summary }}</p>
+      <div class="lesson-detail__body">
+        <p>{{ lesson.body }}</p>
+        <div class="lesson-note">
+          <strong>Keep learning</strong>
+          <p>Use this guide to understand the idea, not as a recommendation to buy or sell.</p>
+        </div>
+      </div>
+    </article>
+  </main>
+</div>
+{% endblock %}

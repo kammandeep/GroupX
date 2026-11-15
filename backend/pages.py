@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from .alerts import sync_signal_alert_events
 from .auth import login_required
 from .db import get_db
+from .learning import FEATURED_LESSON, LEARN_CATEGORIES, LESSONS, get_lesson
 from .models import AlertEvent, AlertRule, UserSettings
 from .security import check_csrf
 
@@ -17,6 +18,38 @@ bp = Blueprint("pages", __name__)
 @login_required
 def home():
     return render_template("home.html")
+
+
+@bp.get("/learn")
+@login_required
+def learn():
+    category = request.args.get("category", "all")
+    valid_categories = {value for value, _label in LEARN_CATEGORIES}
+    if category not in valid_categories:
+        category = "all"
+    lessons = (
+        LESSONS
+        if category == "all"
+        else tuple(lesson for lesson in LESSONS if lesson["category"] == category)
+    )
+    return render_template(
+        "learn/learn.html",
+        categories=LEARN_CATEGORIES,
+        selected_category=category,
+        featured=FEATURED_LESSON,
+        lessons=lessons,
+    )
+
+
+@bp.get("/learn/<slug>")
+@login_required
+def learn_lesson(slug):
+    lesson = get_lesson(slug)
+    if lesson is None:
+        from flask import abort
+
+        abort(404)
+    return render_template("learn/lesson.html", lesson=lesson)
 
 
 @bp.route("/alerts", methods=("GET", "POST"))

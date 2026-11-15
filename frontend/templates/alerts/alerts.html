@@ -15,7 +15,7 @@
       <span class="nav__item is-disabled">Strategy search</span>
       <span class="nav__item is-disabled">Watchlist</span>
       <a class="nav__item is-active" href="{{ url_for('pages.alerts') }}" aria-current="page">Alerts</a>
-      <span class="nav__item is-disabled">Learn</span>
+      <a class="nav__item" href="{{ url_for('pages.learn') }}">Learn</a>
       <a class="nav__item" href="{{ url_for('pages.settings') }}">Settings</a>
     </nav>
     <p class="sidebar__note">Signals are for learning. Not financial advice.</p>

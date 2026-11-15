@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Learn{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/learn.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="shell">
+  <aside class="sidebar">
+    <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="JAK" width="120">
+    <nav aria-label="Main">
+      <a class="nav__item" href="{{ url_for('pages.home') }}">Home</a>
+      <span class="nav__item is-disabled">Stock search</span>
+      <span class="nav__item is-disabled">Strategy search</span>
+      <span class="nav__item is-disabled">Watchlist</span>
+      <a class="nav__item" href="{{ url_for('pages.alerts') }}">Alerts</a>
+      <a class="nav__item is-active" href="{{ url_for('pages.learn') }}" aria-current="page">Learn</a>
+      <a class="nav__item" href="{{ url_for('pages.settings') }}">Settings</a>
+    </nav>
+    <p class="sidebar__note">Signals are for learning. Not financial advice.</p>
+  </aside>
+
+  <main class="content learn-content">
+    <header class="topbar">
+      <div>
+        <h1>Learn</h1>
+        <p class="muted">Plain-English guides for new traders</p>
+      </div>
+      <div class="learn-topbar">
+        <label class="search" aria-label="Search ticker or strategy">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Search ticker or strategy">
+        </label>
+        <div class="topbar__user">
+          <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+          <span>{{ g.user.username }}</span>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn--outline btn--small" type="submit">Log out</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <nav class="learn-tabs" aria-label="Learn categories">
+      {% for value, label in categories %}
+      <a class="{{ 'is-active' if selected_category == value else '' }}"
+         href="{{ url_for('pages.learn', category=value) }}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+
+    <article class="learn-featured">
+      <div>
+        <p class="learn-eyebrow">Featured guide</p>
+        <h2>{{ featured.title }}</h2>
+        <p>{{ featured.summary }}</p>
+        <a class="btn btn--primary learn-read-button" href="{{ url_for('pages.learn_lesson', slug=featured.slug) }}">
+          Read guide ({{ featured.read_time }} min)
+        </a>
+      </div>
+      <div class="learn-chart" aria-hidden="true">
+        <svg viewBox="0 0 180 90" role="presentation">
+          <polyline points="8,54 28,58 46,51 65,57 84,53 104,58 124,43 141,49 158,39 174,48"
+                    fill="none" stroke="currentColor" stroke-width="2" />
+        </svg>
+      </div>
+    </article>
+
+    <section class="lesson-grid" aria-label="Lessons">
+      {% for lesson in lessons %}
+      <article class="lesson-card">
+        <span class="lesson-number">{{ loop.index }}</span>
+        <h2>{{ lesson.title }}</h2>
+        <p>{{ lesson.summary }}</p>
+        <div class="lesson-card__footer">
+          <span>{{ lesson.read_time }} min read</span>
+          <a href="{{ url_for('pages.learn_lesson', slug=lesson.slug) }}">Read</a>
+        </div>
+      </article>
+      {% endfor %}
+    </section>
+  </main>
+</div>
+{% endblock %}
