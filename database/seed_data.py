@@ -71,7 +71,7 @@ SAMPLE_PREDICTIONS = (
 
 #can add more sample strategies here with the name/description/model
 SAMPLE_STRATEGIES = (
-    ("Momentum", "Buys stocks the models expects to keep rising, sells one that is expectect to continue falling.", "XGBoost"), ("Mean Reversion", "Looks for the stocks that have moved too far, too fast and may swing back.", "LSTM"),
+    ("Momentum", "Buys stocks the models expects to keep rising, sells one that is expectect to continue falling.", "XGBoost"), ("Mean reversion", "Looks for the stocks that have moved too far, too fast and may swing back.", "LSTM"),
 )
 
 #ticker/strategy name/signal/ confidence
@@ -119,7 +119,7 @@ def populate_sample_data(session):
                 select(StockData.date).where(StockData.ticker == ticker)
             ).all()
         )
-        for date, (open_price, high, low, close, volume) in zip(DATES, rows):
+        for date, (open_price, high, close, low, volume) in zip(DATES, rows):
             if date not in existing_dates:
                 session.add(
                     StockData(

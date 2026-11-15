@@ -44,8 +44,8 @@ def create_signal_alert_events(db, signal):
             detail=f"{signal.model_name or 'Signal model'} signal generated",
             tone=signal.signal_type.lower(),
             created_at=(
-                signal.signal_timestamp
-                if isinstance(signal.signal_timestamp, datetime)
+                signal.created_at
+                if isinstance(signal.created_at, datetime)
                 else datetime.now(timezone.utc).replace(tzinfo=None)
             ),
         )
