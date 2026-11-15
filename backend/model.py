@@ -2,8 +2,6 @@ import pandas as pd
 import numpy as np
 import copy
 from dotenv import load_dotenv
-from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
@@ -12,6 +10,10 @@ import os
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
+from datetime import datetime, timezone
+from sqlalchemy import create_engine, text
+import uuid
+from pathlib import Path
 
 load_dotenv()
 
@@ -48,6 +50,8 @@ def UniversalTry(url):
     except requests.exceptions.RequestException as e:
         print(f"Something has gone horribly wrong {e}")
         exit()
+    
+engine = create_engine("sqlite:///GroupX.db")    
     
 # Call to grab historical data from the past 10 years for top 5 companies
 def fetchHistoricalData():
@@ -117,9 +121,43 @@ print(df.isnull().sum())
 print("Duplicates: ")
 print(df.index.duplicated().sum())
 
+#======================================================
+# SAVING TO SQL DB
+#======================================================
+
+# create sql columns and ready db to be saved to sql database
+def build_daily(df):
+    df = df[~df["condition"].str.contains("M", na=False)]
+    df = (df.sort_values(["symbol", "date", "auction", "size", "timestamp"]).drop_duplicates(["symbol", "date", "auction"], keep="last"))
+    
+    wide = (df.pivot(index=["symbol", "date"], columns="auction", values="price").reset_index().rename(columns={"symbol": "ticker"}))
+    wide.columns.name = None
+    
+    wide["id"] = [str(uuid.uuid4()) for _ in range(len(wide))]
+    wide["created_at"] = datetime.now(timezone.utc)
+    wide["date"] = pd.to_datetime(wide["date"]).dt.date
+    return wide[["id", "ticker", "date", "open", "close", "created_at"]]
+
+create_sql = """
+    CREATE TABLE IF NOT EXISTS stock_data(
+      id VARCHAR(36) PRIMARY KEY,
+      ticker VARCHAR(10) NOT NULL,
+      date DATE NOT NULL,
+      open REAL,
+      close REAL,
+      created_at TIMESTAMP NOT NULL,
+      UNIQUE (ticker, date)
+    )"""
+
+with engine.begin() as conn:
+    conn.execute(text("DROP TABLE IF EXISTS stock_data"))
+    conn.execute(text(create_sql))
+    
+daily = build_daily(df)
+daily.to_sql("stock_data", engine, if_exists="append", index=False, chunksize=1000)
 
 #======================================================
-# PRE-PROCESSING
+# PRE-PROCESSING FOR ML - XGBOOST
 #======================================================
 
 dfClose = df[df['auction'].str.contains('open') == False]
@@ -398,23 +436,72 @@ dl_model.eval()
 
 with torch.no_grad():
     test_prob = torch.sigmoid(dl_model(X_test_tensor)).numpy()
-test_pred = (test_prob > 0.5).astype(int)
-xgb_pred = (dl_test['raw_prob'] > 0.5).astype(int)
+    
 
-majority_class = int(round(dl_train["y"].mean()))
-majority_acc = accuracy_score(dl_test["y"], np.full_like(dl_test["y"], majority_class))
+# test_pred = (test_prob > 0.5).astype(int)
+# xgb_pred = (dl_test['raw_prob'] > 0.5).astype(int)
 
-out = pd.DataFrame({
-    'date' : dl_test["dates"],
-    "symbol": dl_test["syms"],
-    "target_day" : dl_test["y"],
-    'xgb_prob': dl_test["raw_prob"],
-    "lstm_prob": test_prob
-})
+# majority_class = int(round(dl_train["y"].mean()))
+# majority_acc = accuracy_score(dl_test["y"], np.full_like(dl_test["y"], majority_class))
 
-y_results = dl_test["y"]
-print(f"Majority class accuraccy: {majority_acc:.4f}")
-print(f"XGBoost alone acc: {accuracy_score(y_results, xgb_pred):.4f} AUC: {roc_auc_score(y_results, dl_test["raw_prob"])}")
-print(f"XGBoost + LSTM acc {accuracy_score(y_results, test_pred)} AUC: {roc_auc_score(y_results, test_prob)}")
 
-out.to_csv("final_test_predictions.csv", index=False)
+#==========================================================
+# TO SQL DATABASE SECTION
+#==========================================================
+
+symbol_map_reverse = {0:'AAPL',1:'AMZN',2:'GOOGL',3:'MSFT',4:'NVDA'}
+
+
+created_at = datetime.now(timezone.utc)
+
+def build_export(model_name, probs):
+    preds = (probs >0.5).astype(int)
+    return pd.DataFrame({
+        "id" : [str(uuid.uuid4()) for _ in range(len(probs))],
+        "ticker" : pd.Series(dl_test["syms"]).map(symbol_map_reverse).values,
+        "prediction_date" : pd.to_datetime(dl_test["dates"]).strftime("%Y-%m-%d"),
+        "prediction_close" : np.where(preds == 1, "up", "down"),
+        "actual_close" : np.where(dl_test["y"] == 1, "up", "down"),
+        "confidence_score" : np.where(preds == 1, probs, 1 - probs).round(4),
+        "direction" : np.where(preds == 1, "up", "down"),
+        "model_name" : model_name,
+        "created_at" : created_at,
+    })
+    
+export_df = pd.concat([
+    build_export("xgboost", dl_test['raw_prob']),
+    build_export("xgboost_lstm", test_prob),
+], ignore_index=True)
+
+export_df["prediction_date"] = pd.to_datetime(export_df["prediction_date"]).dt.date
+
+export_df = export_df.sort_values(["prediction_date", "ticker", "model_name"]).reset_index(drop=True)
+
+create_table_sql = """
+CREATE TABLE IF NOT EXISTS predictions(
+    id VARCHAR(36) PRIMARY KEY,
+    ticker VARCHAR(10) NOT NULL,
+    prediction_date DATE NOT NULL,
+    prediction_close VARCHAR(4) NOT NULL,
+    actual_close VARCHAR(4),
+    confidence_score FLOAT NOT NULL,
+    direction VARCHAR(4) NOT NULL,
+    model_name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    UNIQUE (ticker, prediction_date, model_name)
+    )"""
+
+with engine.begin() as conn:
+    conn.execute(text(create_table_sql))
+    
+    conn.execute(
+        text(
+            "DELETE FROM predictions WHERE model_name IN ('xgboost', 'xgboost_lstm') "
+            "AND prediction_date >= :start"
+        ), {"start": export_df["prediction_date"].min()},
+    )
+    
+    export_df.to_sql("predictions", conn, if_exists="append", index=False, chunksize=1000)
+
+
+print(f"Wrote {len(export_df)} rows to the predictions table")
