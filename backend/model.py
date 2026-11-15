@@ -102,36 +102,6 @@ def checkCSV():
         print("No file exists by this name, creating now")
         df = fetchHistoricalData()
         df.to_csv("HistoricalData.csv", index=False)
-        
-    # create_table_sql = """
-    # CREATE TABLE IF NOT EXISTS stock_data(
-    # id VARCHAR(36) PRIMARY KEY,
-    # ticker VARCHAR(10) NOT NULL,
-    # date DATE NOT NULL,
-    # open VARCHAR(4) NOT NULL,
-    # high VARCHAR(4),
-    # low FLOAT NOT NULL,
-    # close VARCHAR(4) NOT NULL,
-    # volume VARCHAR(50) NOT NULL,
-    # created_at TIMESTAMP NOT NULL,
-    # UNIQUE (ticker)
-    # )"""
-
-    # with engine.begin() as conn:
-    #     conn.execute(text(create_table_sql))
-    
-    #     conn.execute(
-    #         text(
-    #             "DELETE FROM predictions WHERE model_name IN ('xgboost', 'xgboost_lstm') "
-    #             "AND prediction_date >= :start"
-    #         ), {"start": export_df["prediction_date"].min()},
-    #     )
-    
-    #     export_df.to_sql("predictions", conn, if_exists="append", index=False, chunksize=1000)
-
-
-
-
 
 checkCSV()
 df = pd.read_csv("HistoricalData.csv")
@@ -151,9 +121,43 @@ print(df.isnull().sum())
 print("Duplicates: ")
 print(df.index.duplicated().sum())
 
+#======================================================
+# SAVING TO SQL DB
+#======================================================
+
+# create sql columns and ready db to be saved to sql database
+def build_daily(df):
+    df = df[~df["condition"].str.contains("M", na=False)]
+    df = (df.sort_values(["symbol", "date", "auction", "size", "timestamp"]).drop_duplicates(["symbol", "date", "auction"], keep="last"))
+    
+    wide = (df.pivot(index=["symbol", "date"], columns="auction", values="price").reset_index().rename(columns={"symbol": "ticker"}))
+    wide.columns.name = None
+    
+    wide["id"] = [str(uuid.uuid4()) for _ in range(len(wide))]
+    wide["created_at"] = datetime.now(timezone.utc)
+    wide["date"] = pd.to_datetime(wide["date"]).dt.date
+    return wide[["id", "ticker", "date", "open", "close", "created_at"]]
+
+create_sql = """
+    CREATE TABLE IF NOT EXISTS stock_data(
+      id VARCHAR(36) PRIMARY KEY,
+      ticker VARCHAR(10) NOT NULL,
+      date DATE NOT NULL,
+      open REAL,
+      close REAL,
+      created_at TIMESTAMP NOT NULL,
+      UNIQUE (ticker, date)
+    )"""
+
+with engine.begin() as conn:
+    conn.execute(text("DROP TABLE IF EXISTS stock_data"))
+    conn.execute(text(create_sql))
+    
+daily = build_daily(df)
+daily.to_sql("stock_data", engine, if_exists="append", index=False, chunksize=1000)
 
 #======================================================
-# PRE-PROCESSING
+# PRE-PROCESSING FOR ML - XGBOOST
 #======================================================
 
 dfClose = df[df['auction'].str.contains('open') == False]
@@ -432,11 +436,13 @@ dl_model.eval()
 
 with torch.no_grad():
     test_prob = torch.sigmoid(dl_model(X_test_tensor)).numpy()
-test_pred = (test_prob > 0.5).astype(int)
-xgb_pred = (dl_test['raw_prob'] > 0.5).astype(int)
+    
 
-majority_class = int(round(dl_train["y"].mean()))
-majority_acc = accuracy_score(dl_test["y"], np.full_like(dl_test["y"], majority_class))
+# test_pred = (test_prob > 0.5).astype(int)
+# xgb_pred = (dl_test['raw_prob'] > 0.5).astype(int)
+
+# majority_class = int(round(dl_train["y"].mean()))
+# majority_acc = accuracy_score(dl_test["y"], np.full_like(dl_test["y"], majority_class))
 
 
 #==========================================================
