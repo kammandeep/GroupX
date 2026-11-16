@@ -10,3 +10,4 @@ instance/
 *.log
 .DS_Store
 ml_pipeline/trained_models/
+backend/GroupX.db
