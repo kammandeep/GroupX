@@ -51,9 +51,9 @@ def UniversalTry(url):
         print(f"Something has gone horribly wrong {e}")
         exit()
 
-db_path = Path(__file__).parent / "GroupX.db"
+db_path = Path(__file__).parent / "instance" / "groupx.sqlite3"
     
-engine = create_engine(f"sqlite:///{db_path}")    
+engine = create_engine(f"sqlite:///{db_path.as_posix()}")    
     
 # Call to grab historical data from the past 10 years for top 5 companies
 def fetchHistoricalData():
@@ -140,23 +140,22 @@ def build_daily(df):
     wide["date"] = pd.to_datetime(wide["date"]).dt.date
     return wide[["id", "ticker", "date", "open", "close", "created_at"]]
 
-create_sql = """
-    CREATE TABLE IF NOT EXISTS stock_data(
-      id VARCHAR(36) PRIMARY KEY,
-      ticker VARCHAR(10) NOT NULL,
-      date DATE NOT NULL,
-      open REAL,
-      close REAL,
-      created_at TIMESTAMP NOT NULL,
-      UNIQUE (ticker, date)
-    )"""
-
-with engine.begin() as conn:
-    conn.execute(text("DROP TABLE IF EXISTS stock_data"))
-    conn.execute(text(create_sql))
     
 daily = build_daily(df)
-daily.to_sql("stock_data", engine, if_exists="append", index=False, chunksize=1000)
+daily["high"] = None
+daily["low"] = None
+daily["volume"] = None
+daily = daily[["id", "ticker", "date", "open", "high", "low" "close", "volume", "created_at"]]
+
+with engine.begin() as conn:
+    existing = pd.read_sql(text("SELECT ticker, date FROM stock_data"), conn)
+    existing["date"] = pd.to_datetime(existing["date"]).dt.date
+    merged = daily.merge(existing, on=["ticker", "date"], how="left", indicator=True)
+    new_rows = merged[merged["merge"] == "left_only"].drop(columns="merge")
+    new_rows.to_sql("stock_data", engine, if_exists="append", index=False, chunksize=1000)
+    
+
+print(f"Wrote {len(new_rows)} rows to the stock_data table")
 
 #======================================================
 # PRE-PROCESSING FOR ML - XGBOOST
@@ -478,21 +477,7 @@ export_df["prediction_date"] = pd.to_datetime(export_df["prediction_date"]).dt.d
 
 export_df = export_df.sort_values(["prediction_date", "ticker", "model_name"]).reset_index(drop=True)
 
-create_table_sql = """
-CREATE TABLE IF NOT EXISTS predictions(
-    ticker VARCHAR(10) NOT NULL,
-    prediction_date DATE NOT NULL,
-    predicted_close VARCHAR(4) NOT NULL,
-    actual_close VARCHAR(4),
-    confidence_score FLOAT NOT NULL,
-    direction VARCHAR(4) NOT NULL,
-    model_name VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    UNIQUE (ticker, prediction_date, model_name)
-    )"""
-
 with engine.begin() as conn:
-    conn.execute(text(create_table_sql))
     
     conn.execute(
         text(
