@@ -50,8 +50,10 @@ def UniversalTry(url):
     except requests.exceptions.RequestException as e:
         print(f"Something has gone horribly wrong {e}")
         exit()
+
+db_path = Path(__file__).parent / "GroupX.db"
     
-engine = create_engine("sqlite:///GroupX.db")    
+engine = create_engine(f"sqlite:///{db_path}")    
     
 # Call to grab historical data from the past 10 years for top 5 companies
 def fetchHistoricalData():
@@ -457,10 +459,9 @@ created_at = datetime.now(timezone.utc)
 def build_export(model_name, probs):
     preds = (probs >0.5).astype(int)
     return pd.DataFrame({
-        "id" : [str(uuid.uuid4()) for _ in range(len(probs))],
         "ticker" : pd.Series(dl_test["syms"]).map(symbol_map_reverse).values,
         "prediction_date" : pd.to_datetime(dl_test["dates"]).strftime("%Y-%m-%d"),
-        "prediction_close" : np.where(preds == 1, "up", "down"),
+        "predicted_close" : np.where(preds == 1, "up", "down"),
         "actual_close" : np.where(dl_test["y"] == 1, "up", "down"),
         "confidence_score" : np.where(preds == 1, probs, 1 - probs).round(4),
         "direction" : np.where(preds == 1, "up", "down"),
@@ -479,10 +480,9 @@ export_df = export_df.sort_values(["prediction_date", "ticker", "model_name"]).r
 
 create_table_sql = """
 CREATE TABLE IF NOT EXISTS predictions(
-    id VARCHAR(36) PRIMARY KEY,
     ticker VARCHAR(10) NOT NULL,
     prediction_date DATE NOT NULL,
-    prediction_close VARCHAR(4) NOT NULL,
+    predicted_close VARCHAR(4) NOT NULL,
     actual_close VARCHAR(4),
     confidence_score FLOAT NOT NULL,
     direction VARCHAR(4) NOT NULL,
