@@ -69,15 +69,15 @@
 
     <section class="lesson-grid" aria-label="Lessons">
       {% for lesson in lessons %}
-      <article class="lesson-card">
+      <a class="lesson-card" href="{{ url_for('pages.learn_lesson', slug=lesson.slug) }}">
         <span class="lesson-number">{{ loop.index }}</span>
         <h2>{{ lesson.title }}</h2>
         <p>{{ lesson.summary }}</p>
         <div class="lesson-card__footer">
           <span>{{ lesson.read_time }} min read</span>
-          <a href="{{ url_for('pages.learn_lesson', slug=lesson.slug) }}">Read</a>
+          <span>Read</span>
         </div>
-      </article>
+      </a>
       {% endfor %}
     </section>
   </main>

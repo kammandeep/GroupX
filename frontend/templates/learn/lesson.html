@@ -28,7 +28,12 @@
       <h1>{{ lesson.title }}</h1>
       <p class="lesson-detail__summary">{{ lesson.summary }}</p>
       <div class="lesson-detail__body">
-        <p>{{ lesson.body }}</p>
+        {% for heading, text in lesson.sections %}
+        <section class="lesson-section">
+          <h2>{{ heading }}</h2>
+          <p>{{ text }}</p>
+        </section>
+        {% endfor %}
         <div class="lesson-note">
           <strong>Keep learning</strong>
           <p>Use this guide to understand the idea, not as a recommendation to buy or sell.</p>

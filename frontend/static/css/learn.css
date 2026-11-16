@@ -13,7 +13,8 @@
 .learn-chart { flex: 0 0 124px; padding: 12px; border-radius: 9px; background: var(--card-2); color: var(--green); }
 .learn-chart svg { display: block; width: 100%; height: auto; }
 .lesson-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.lesson-card { min-height: 153px; display: flex; flex-direction: column; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.lesson-card { min-height: 153px; display: flex; flex-direction: column; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); text-decoration: none; transition: border-color .15s, background .15s, transform .15s; }
+.lesson-card:hover { border-color: var(--gold); background: var(--card-2); transform: translateY(-2px); }
 .lesson-number { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: rgba(245,197,66,.15); color: var(--gold); font-size: 13px; font-weight: 800; }
 .lesson-card h2 { margin-top: 12px; font-size: 13px; }
 .lesson-card > p { margin-top: 5px; color: var(--muted); font-size: 10px; }
@@ -24,6 +25,9 @@
 .lesson-detail h1 { margin-top: 8px; font-size: 28px; }
 .lesson-detail__summary { margin-top: 12px; color: var(--muted); font-size: 15px; }
 .lesson-detail__body { max-width: 640px; margin-top: 28px; font-size: 15px; line-height: 1.7; }
+.lesson-section + .lesson-section { margin-top: 24px; }
+.lesson-section h2 { font-size: 16px; }
+.lesson-section p { margin-top: 7px; color: var(--muted); }
 .lesson-note { margin-top: 24px; padding: 14px; border-left: 3px solid var(--gold); background: rgba(245,197,66,.08); }
 .lesson-note strong { font-size: 13px; }
 .lesson-note p { margin-top: 4px; color: var(--muted); font-size: 12px; }
