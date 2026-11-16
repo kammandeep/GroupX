@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="shell">
+  <aside class="sidebar">
+    <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="JAK" width="120">
+    <nav aria-label="Main">
+      <a class="nav__item" href="{{ url_for('pages.home') }}">Home</a>
+      <span class="nav__item is-disabled">Stock search</span>
+      <span class="nav__item is-disabled">Strategy search</span>
+      <span class="nav__item is-disabled">Watchlist</span>
+      <span class="nav__item is-disabled">Alerts</span>
+      <span class="nav__item is-disabled">Learn</span>
+      <a class="nav__item is-active" href="{{ url_for('pages.settings') }}" aria-current="page">Settings</a>
+    </nav>
+    <div class="sidebar__note">
+      <strong>Not financial advice</strong>
+      <p>Signals are for learning.</p>
+    </div>
+  </aside>
+
+  <main class="content settings-content">
+    <header class="topbar">
+      <div>
+        <h1>Settings</h1>
+        <p class="muted">Make JAK work the way you trade</p>
+      </div>
+      <div class="settings-topbar">
+        <label class="search" aria-label="Search ticker or strategy">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Search ticker or strategy">
+        </label>
+        <div class="topbar__user">
+          <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+          <span>{{ g.user.username }}</span>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn--outline btn--small" type="submit">Log out</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    {% if saved %}<p class="notice" role="status">Your settings have been saved.</p>{% endif %}
+    {% if errors.form %}<p class="form-error" role="alert">{{ errors.form }}</p>{% endif %}
+
+    <form method="post" class="settings-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <section class="settings-card">
+        <h2>Profile</h2>
+        <div class="profile-fields">
+          <span class="profile-avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+          <div class="field{% if errors.username %} field--error{% endif %}">
+            <label for="username">Name</label>
+            <input id="username" name="username" value="{{ g.user.username }}" required>
+            {% if errors.username %}<p class="field__msg field__msg--error">{{ errors.username }}</p>{% endif %}
+          </div>
+          <div class="field{% if errors.email %} field--error{% endif %}">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" value="{{ g.user.email }}" required>
+            {% if errors.email %}<p class="field__msg field__msg--error">{{ errors.email }}</p>{% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <h2>How JAK shows things</h2>
+        <div class="preference-row">
+          <div><strong>Experience level</strong><p>Beginner mode adds plain-English tips.</p></div>
+          <div class="choice-group" role="group" aria-label="Experience level">
+            {% for value, label in [("beginner", "Beginner"), ("intermediate", "Intermediate"), ("pro", "Pro")] %}
+            <label class="choice"><input type="radio" name="experience_level" value="{{ value }}" {% if settings.experience_level == value %}checked{% endif %}>{{ label }}</label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="preference-row">
+          <div><strong>Risk comfort</strong><p>Filters strategies by how big the drops were.</p></div>
+          <div class="choice-group" role="group" aria-label="Risk comfort">
+            {% for value, label in [("low", "Low"), ("medium", "Medium"), ("high", "High")] %}
+            <label class="choice"><input type="radio" name="risk_comfort" value="{{ value }}" {% if settings.risk_comfort == value %}checked{% endif %}>{{ label }}</label>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <h2>Alerts</h2>
+        {% for name, title, description, enabled in [
+          ("signal_alerts", "Buy and sell signals", "Tell me when a watchlist stock changes signal", settings.signal_alerts),
+          ("daily_summary", "Daily summary", "One email each morning before market open", settings.daily_summary),
+          ("strategy_updates", "Strategy updates", "When a strategy is retrained", settings.strategy_updates)
+        ] %}
+        <label class="alert-row">
+          <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+          <input class="toggle" type="checkbox" name="{{ name }}" {% if enabled %}checked{% endif %}>
+        </label>
+        {% endfor %}
+      </section>
+
+      <div class="settings-actions">
+        <button class="btn btn--primary settings-save" type="submit">Save changes</button>
+      </div>
+    </form>
+  </main>
+</div>
+{% endblock %}
