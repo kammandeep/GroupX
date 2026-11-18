@@ -1,65 +1,88 @@
 {% extends 'base.html' %}
 {% block title %}Watchlist | Project JAK{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/watchlist.css') }}">{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/watchlist.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% macro sparkline(values, up) %}
+    {% if values and values|length > 1 %}
+    {% set lo = values|min %}
+    {% set span = ((values|max) - lo) or 1 %}
+    {% set n = values|length - 1 %}
+    <svg class="spark {{ 'up' if up else 'down' }}" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
+        <polygon class="spark__fill" points="{% for v in values %}{{ (loop.index0 / n * 100)|round(1) }},{{ (28 - (v - lo) / span * 26)|round(1) }} {% endfor %}100,30 0,30"/>
+        <polyline class="spark__line" points="{% for v in values %}{{ (loop.index0 / n * 100)|round(1) }},{{ (28 - (v - lo) / span * 26)|round(1) }} {% endfor %}"/>
+    </svg>
+    {% endif %}
+{% endmacro %}
 
 {% block content %}
-<div class="watchlist">
+<div class="content">
     <header class="topbar">
       <div>
         <h1>Watchlist</h1>
-        <p class="muted">Welcome back, {{ g.user.username }}</p>
+        <p class="muted">Stocks you follow and their latest signals {{ g.user.username }}</p>
       </div>
+      <div class="topbar__right">
+        <input class="search" type="search" placeholder="Search ticker or strategy" aria-label="Search">
       <div class="topbar__user">
         <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
-        <span>{{ g.user.username }}</span>
+      </div>
         <form method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn--outline btn--small" type="submit">Log out</button>
+          <button class="btn btn--outline" type="submit">Log out</button>
         </form>
       </div>
     </header>
-  
-    <div class="container">
-      <div class="card-container">
-        <div class="bot-card">
-            <div class="bot-card-head">
-                <h2>Your watchlist</h2>
-                <a class="link-gold" href="">View all </a>
-            </div>
-
-            <div class="watch-table">
-                <div class="watch-row watch-row--head">
-                    <span>Stock</span>
-                    <span>Price</span>
-                    <span>Today</span>
-                    <span>Best Strategy</span>
-                    <span>Signal</span>
-                </div>
-
-            {% for stock in watchlists %}
-                {% set best = stock.signals|sort(attribute='confidence', reverse=true)|first %}
-                <div class="watch-row">
-                    <div>
-                        <span class="watch-symbol">{{ stock.ticker }}</span>
-                        <span class="watch-name">{{ stock.company_name }}</span>
-                    </div>
-                    <span>${{  "%.2f"|format(stock.close) }}</span>
-                    <span class="{{ stock.movement }}">
-                        {% if stock.change_pct is not none %}{{ "%+.2f"|format(stock.change_pct) }}%{% else %}&ndash;{% endif %}
-                    </span>
-                    <span>{{ best.strategy if best else 'n/a' }}</span>
-                    <span>
-                            <span class="mid-card-02-pill pill--{{ (best.signal if best else 'HOLD')|lower }}">
-                                {{ (best.signal if best else 'HOLD')|upper }}
-                            </span>
-                        </span>
-                    </div>
-                    {% else %}
-                    <p>Nothing currently on your watchlist</p>
-                    {% endfor %}
-                </div>
-            </div>
+    
+    <div class="toolbar">
+        <div class="filters" role="group" aria-label="Filter by signal">
+            <button class="filter is-active" type="button" data-filter="all">All</button>
+            <button class="filter" type="button" data-filter="buy">Buy</button>
+            <button class="filter" type="button" data-filter="hold">Hold</button>
+            <button class="filter" type="button" data-filter="sell">Sell</button>
         </div>
+        <button class="btn watchlist-btn-add" type="button" disabled title="Coming Soon">+ Add stock</button>
     </div>
+    
+    <section class="table-card">
+        <div class="wl-row wl-row--head">
+            <span>Stock</span><span>Price</span><span>Today</span><span>Last 30 Days</span><span>Best Strategy</span><span>Signal</span>
+        </div>
+    
+
+    {% for s in watchlist %}
+    <div class="wl-row" data-signal="{{ s.signal_type|lower }}">
+        <div>
+            <div class="wl-symbol">{{ s.symbol }}</div>
+            <div class="wl-name">{{ s.name }}</div>
+        </div>
+        <span>{{ "$%.2f"|format(s.price) if s.price is not none else "-" }}</span>
+        <span class="{{ 'up' if s.change_pct is not none and s.change_pct >= 0 else 'down' }}">
+            {{ "%+.1f%%"|format(s.change_pct) if s.change_pct is not none else "-" }}
+        </span>
+        <div>{{ sparkline(s.history, s.change_pct is not none and s.change_pct >= 0) }}</div>
+        <span>{{ s.best_strategy or "-" }}</span>
+        <span><span class="pill pill--{{ s.signal_type|lower }}">{{ s.signal_type|upper }}</span></span>
+    </div>
+    {% else %}
+    <p class="muted empty">Nothing currently on your watchlist</p>
+    {% endfor %}
+    </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+    const filters = document.querySelectorAll('.filter');
+    const rows = document.querySelectorAll('.wl-row[data-signal]');
+    filters.forEach(btn => btn.addEventListener('click', () => {
+        filters.forEach(b => b.classList.toggle('is-active', b === btn));
+        const f = btn.dataset.filter;
+        rows.forEach(r => r.hidden = f !== 'all' && r.dataset.signal !==f);
+    }));
+</script>
+
 {% endblock %}
