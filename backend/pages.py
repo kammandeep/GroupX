@@ -18,14 +18,12 @@ bp = Blueprint("pages", __name__)
 @login_required
 @onboarding_required
 def home():
-    if g.user:
-        return redirect(url_for("dashboard.dashboard"))
-
-    return redirect(url_for("auth.login"))
+    return redirect(url_for("dashboard.dashboard"))
 
 
 @bp.route("/settings", methods=("GET", "POST"))
 @login_required
+@onboarding_required
 def settings():
     db = get_db()
     user_settings = db.scalar(
