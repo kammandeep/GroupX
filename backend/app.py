@@ -3,7 +3,7 @@ from pathlib import Path
 from flask import Flask, abort
 from sqlalchemy import func, select
 
-from . import auth, db, pages, routes, dashboard
+from . import auth, db, pages, routes, dashboard, watchlist
 from .config import Config
 from .models import Company, Prediction, Stock, StockData
 from .security import csrf_token
@@ -27,6 +27,7 @@ def create_app(test_config=None):
     app.register_blueprint(routes.auth_bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(dashboard.bp)
+    app.register_blueprint(watchlist.bp)
     app.context_processor(lambda: {"csrf_token": csrf_token})
 
     @app.get("/api/stocks")

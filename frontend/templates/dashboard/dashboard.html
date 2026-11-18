@@ -89,7 +89,7 @@
                     </div>
                     <span>${{  "%.2f"|format(stock.price) }}</span>
                     <span class="{{ 'up' if stock.change_pct >= 0 else 'down' }}">
-                        {{ "%+.1f|format(stock.change_pct)" }}%
+                        {{ "%+.1f"|format(stock.change_pct) }}%
                     </span>
                     <span>{{ stock.best_strategy }}</span>
                     <span><span class="mid-card-02-pill pill--{{ stock.signal_type|lower }}">{{ stock.signal_type|upper }}</span></span>

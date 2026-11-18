@@ -27,32 +27,39 @@
                 <a class="link-gold" href="">View all </a>
             </div>
 
-        <div class="watch-table">
-            <div class="watch-row watch-row--head">
-                <span>Stock</span>
-                <span>Price</span>
-                <span>Today</span>
-                <span>Best Strategy</span>
-                <span>Signal</span>
-            </div>
+            <div class="watch-table">
+                <div class="watch-row watch-row--head">
+                    <span>Stock</span>
+                    <span>Price</span>
+                    <span>Today</span>
+                    <span>Best Strategy</span>
+                    <span>Signal</span>
+                </div>
 
             {% for stock in watchlists %}
+                {% set best = stock.signals|sort(attribute='confidence', reverse=true)|first %}
                 <div class="watch-row">
                     <div>
-                        <span class="watch-symbol">{{ stock.symbol }}</span>
-                        <span class="watch-name">{{ stock.name }}</span>
+                        <span class="watch-symbol">{{ stock.ticker }}</span>
+                        <span class="watch-name">{{ stock.company_name }}</span>
                     </div>
-                    <span>${{  "%.2f"|format(stock.price) }}</span>
-                    <span class="{{ 'up' if stock.change_pct >= 0 else 'down' }}">
-                        {{ "%+.1f|format(stock.change_pct)" }}%
+                    <span>${{  "%.2f"|format(stock.close) }}</span>
+                    <span class="{{ stock.movement }}">
+                        {% if stock.change_pct is not none %}{{ "%+.2f"|format(stock.change_pct) }}%{% else %}&ndash;{% endif %}
                     </span>
-                    <span>{{ stock.best_strategy }}</span>
-                    <span><span class="mid-card-02-pill pill--{{ stock.signal_type|lower }}">{{ stock.signal_type|upper }}</span></span>
+                    <span>{{ best.strategy if best else 'n/a' }}</span>
+                    <span>
+                            <span class="mid-card-02-pill pill--{{ (best.signal if best else 'HOLD')|lower }}">
+                                {{ (best.signal if best else 'HOLD')|upper }}
+                            </span>
+                        </span>
+                    </div>
+                    {% else %}
+                    <p>Nothing currently on your watchlist</p>
+                    {% endfor %}
                 </div>
-            {% else %}
-            <p>Nothing currently on your watchlist</p>
-            {% endfor %}
+            </div>
         </div>
     </div>
-    </div>
 </div>
+{% endblock %}
