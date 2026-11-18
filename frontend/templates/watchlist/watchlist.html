@@ -19,6 +19,7 @@
 
 {% block content %}
 <div class="content">
+    {% include "partials/flash.html" %}
     <header class="topbar">
       <div>
         <h1>Watchlist</h1>
@@ -28,10 +29,11 @@
         <input class="search" type="search" placeholder="Search ticker or strategy" aria-label="Search">
       <div class="topbar__user">
         <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+        <span>{{ g.user.username }}</span>
       </div>
         <form method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn--outline" type="submit">Log out</button>
+          <button class="btn btn-outline" type="submit">Log out</button>
         </form>
       </div>
     </header>
@@ -43,7 +45,16 @@
             <button class="filter" type="button" data-filter="hold">Hold</button>
             <button class="filter" type="button" data-filter="sell">Sell</button>
         </div>
-        <button class="btn watchlist-btn-add" type="button" disabled title="Coming Soon">+ Add stock</button>
+        {% if available %}
+        <form class="add-form" method="post" action="{{ url_for('watchlist.add') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select class="search" name="ticker" required>
+                <option value="" disabled selected>Choose a stock option </option>
+                {% for t in available %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-add" type="submit">+ Add Stock</button>
+        </form>
+        {% endif %}
     </div>
     
     <section class="table-card">
@@ -53,7 +64,7 @@
     
 
     {% for s in watchlist %}
-    <div class="wl-row" data-signal="{{ s.signal_type|lower }}">
+    <div class="wl-row" data-signal="{{ (s.signal_type or none)|lower }}">
         <div>
             <div class="wl-symbol">{{ s.symbol }}</div>
             <div class="wl-name">{{ s.name }}</div>
@@ -64,7 +75,11 @@
         </span>
         <div>{{ sparkline(s.history, s.change_pct is not none and s.change_pct >= 0) }}</div>
         <span>{{ s.best_strategy or "-" }}</span>
-        <span><span class="pill pill--{{ s.signal_type|lower }}">{{ s.signal_type|upper }}</span></span>
+        <span> 
+            {% if s.signal_type %}
+                <span class="pill pill--{{ s.signal_type|lower }}">{{ s.signal_type|upper }}</span>
+            {% else %}-{% endif %}
+        </span>
     </div>
     {% else %}
     <p class="muted empty">Nothing currently on your watchlist</p>

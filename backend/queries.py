@@ -46,6 +46,19 @@ def latest_prices(session, tickers=None):
         })
     return rows
 
+"""return the close history for each of the companies currently stored over the last 30 days"""
+def price_history(session, tickers, days=30):
+    ranked = select(
+        StockData.ticker, StockData.date, StockData.close, 
+        func.row_number().over(partition_by=StockData.ticker, order_by=StockData.date.desc()).label("rn"),
+    ).where(StockData.ticker.in_(tickers)).subquery()
+    rows = session.execute(
+        select(ranked.c.ticker, ranked.c.close).where(ranked.c.rn <= days).order_by(ranked.c.ticker, ranked.c.date)
+    )
+    history = {}
+    for ticker, close in rows:
+        history.setdefault(ticker, []).append(close)
+    return history
     
 """The newest day of signals, one row per stock per strategy, so the UI can show
     which strategy says BUY, SELL or HOLD for each stock."""
@@ -107,25 +120,25 @@ def watchlist_overview(session, user_id):
     signals_by_ticker = {}
     for s in latest_signals(session):
         signals_by_ticker.setdefault(s["ticker"], []).append(s)
-    return [{**row, "signals": signals_by_ticker.get(row["ticker"], [])}
-            for row in latest_prices(session, tickers)]
+    history = price_history(session, tickers)
+    
+    result = []
+    
+    for row in latest_prices(session, tickers):
+        sigs = signals_by_ticker.get(row['ticker'], [])
+        best = max(sigs, key=lambda s: s['confidence'] or 0) if sigs else None
+        result.append({
+            **row,
+            "symbol" : row['ticker'],
+            "name" : row['company_name'],
+            "price" : row['close'],
+            "history" : history.get(row['ticker'], []),
+            "signal_type" : best['signal'] if best else None,
+            "best_strategy" : best['strategy'].replace("Live ", "").replace("_", " ") if best else None,
+            "signals" : sigs,
+        })
+    
+    return result
 
 
-"""Add a stock to the users lists, creates the list for the first time and should be safe to call twice"""
-def add_to_watchlist(session, user_id, ticker, list_name="My watchlist"):
-    stock = session.scalar(select(Stock).where(Stock.ticker == ticker.upper(), Stock.is_active.is_(True)))
-    if stock is None:
-        raise ValueError(f"{ticker} is not a tracked NASDAQ stock")
 
-    watchlist = session.scalar(select(UserWatchlist).where(
-        UserWatchlist.user_id == user_id, UserWatchlist.name == list_name))
-    if watchlist is None:
-        watchlist = UserWatchlist(user_id=user_id, name=list_name)
-        session.add(watchlist)
-        session.flush()
-
-    exists = session.scalar(select(WatchlistItem.id).where(
-        WatchlistItem.watchlist_id == watchlist.id, WatchlistItem.ticker == stock.ticker))
-    if exists is None:
-        session.add(WatchlistItem(watchlist_id=watchlist.id, ticker=stock.ticker))
-    session.commit()

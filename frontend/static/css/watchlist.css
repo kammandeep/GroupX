@@ -143,3 +143,7 @@
     fill: rgba(255,77,79,.12);
 }
 
+.add-form{
+    display: flex;
+    gap: 10px;
+}
