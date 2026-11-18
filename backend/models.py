@@ -26,6 +26,15 @@ class User(Base):
     is_active = Column(Integer, default=1, nullable=False)       # 1 = active, 0 = disabled
 
 
+class UserProfile(Base):
+    __tablename__ = 'user_profiles'
+
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    goal = Column(String(20))               
+    experience_level = Column(String(20))    
+    completed_at = Column(TIMESTAMP)         
+    created_at = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+
 # =========================
 # SECTION 2: COMPANY MODEL
 # =========================
