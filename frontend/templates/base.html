@@ -13,15 +13,15 @@
         <div class="shell">
         {% block sidebar %}
         <aside class="sidebar">
-            <img src="{{ url_for('static', filename='img/logo.svg')}}" alt="JAK logo"/>
+            <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg')}}" alt="JAK logo"/>
             <nav aria-label="Main">
-                <a class="nav {{ 'active' if request.endpoint == 'dashboard.dashboard' }}" href="{{ url_for('dashboard.dashboard')}}">Home</a>
+                <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'dashboard.dashboard' }}" href="{{ url_for('dashboard.dashboard')}}">Home</a>
                 {#<a class="nav {{ 'active' if request.endpoint == 'pages.stock_search' }}" href="{{ url_for('pages.stock_search')}}">Stock Search</a>#}
                 {#<a class="nav {{ 'active' if request.endpoint == 'pages.strategy_search' }}" href="{{ url_for('pages.strategy_search')}}">Strategy Search</a>#}
-                <a class="nav {{ 'active' if request.endpoint == 'watchlist.watchlist' }}" href="{{ url_for('watchlist.watchlist')}}">Watchlist</a>
-                {#<a class="nav {{ 'active' if request.endpoint == 'pages.alerts' }}" href="{{ url_for('pages.alerts')}}">Alerts</a>#}
-                {#<a class="nav {{ 'active' if request.endpoint == 'pages.learn' }}" href="{{ url_for('pages.learn')}}">Learn</a>#}
-                {#<a class="nav {{ 'active' if request.endpoint == 'pages.settings' }}" href="{{ url_for('pages.settings')}}">Settings</a>#}
+                <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'watchlist.watchlist' }}" href="{{ url_for('watchlist.watchlist')}}">Watchlist</a>
+                <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'pages.alerts' }}" href="{{ url_for('pages.alerts')}}">Alerts</a>
+                <a class="nav nav__item {{ 'active is-active' if request.endpoint in ['pages.learn', 'pages.learn_lesson'] }}" href="{{ url_for('pages.learn')}}">Learn</a>
+                <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'pages.settings' }}" href="{{ url_for('pages.settings')}}">Settings</a>
             </nav>
         </aside>
         {% endblock %}

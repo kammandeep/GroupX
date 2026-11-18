@@ -5,26 +5,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
 {% endblock %}
 
-{% block body %}
-<div class="shell">
-  <aside class="sidebar">
-    <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="JAK" width="120">
-    <nav aria-label="Main">
-      <a class="nav__item" href="{{ url_for('pages.home') }}">Home</a>
-      <span class="nav__item is-disabled">Stock search</span>
-      <span class="nav__item is-disabled">Strategy search</span>
-      <span class="nav__item is-disabled">Watchlist</span>
-      <a class="nav__item" href="{{ url_for('pages.alerts') }}">Alerts</a>
-      <a class="nav__item" href="{{ url_for('pages.learn') }}">Learn</a>
-      <a class="nav__item is-active" href="{{ url_for('pages.settings') }}" aria-current="page">Settings</a>
-    </nav>
-    <div class="sidebar__note">
-      <strong>Not financial advice</strong>
-      <p>Signals are for learning.</p>
-    </div>
-  </aside>
-
-  <main class="content settings-content">
+{% block content %}
+  <div class="content settings-content">
     <header class="topbar">
       <div>
         <h1>Settings</h1>
@@ -107,6 +89,5 @@
         <button class="btn btn--primary settings-save" type="submit">Save changes</button>
       </div>
     </form>
-  </main>
-</div>
+  </div>
 {% endblock %}

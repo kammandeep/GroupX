@@ -5,23 +5,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/alerts.css') }}">
 {% endblock %}
 
-{% block body %}
-<div class="shell">
-  <aside class="sidebar">
-    <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="JAK" width="120">
-    <nav aria-label="Main">
-      <a class="nav__item" href="{{ url_for('pages.home') }}">Home</a>
-      <span class="nav__item is-disabled">Stock search</span>
-      <span class="nav__item is-disabled">Strategy search</span>
-      <span class="nav__item is-disabled">Watchlist</span>
-      <a class="nav__item is-active" href="{{ url_for('pages.alerts') }}" aria-current="page">Alerts</a>
-      <a class="nav__item" href="{{ url_for('pages.learn') }}">Learn</a>
-      <a class="nav__item" href="{{ url_for('pages.settings') }}">Settings</a>
-    </nav>
-    <p class="sidebar__note">Signals are for learning. Not financial advice.</p>
-  </aside>
-
-  <main class="content alerts-content">
+{% block content %}
+  <div class="content alerts-content">
     <header class="topbar">
       <div>
         <h1>Alerts</h1>
@@ -126,6 +111,5 @@
         </section>
       </aside>
     </div>
-  </main>
-</div>
+  </div>
 {% endblock %}
