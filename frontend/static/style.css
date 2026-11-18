@@ -124,6 +124,7 @@ html{
 }
 
 .sidebar-buttons{
+    display: block;
     padding: 0 16px;
     border-radius: 10px;
     color: var(--muted);
@@ -144,7 +145,7 @@ html{
 }
 
 .sidebar-buttons.active{
-    background: #cfb15f;
+    background: rgba(245, 197, 66, .12);
     color: var(--text);
     box-shadow: inset 4px 0 0 var(--gold);
 }
