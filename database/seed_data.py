@@ -76,10 +76,10 @@ SAMPLE_STRATEGIES = (
 
 #ticker/strategy name/signal/ confidence
 SAMPLE_SIGNALS = (
-    ("AAPL", "Momentum", "BUY", 0.82), ("AAPL", "Mean reversion", "HOLD", 0.55),
-    ("TSLA", "Momentum", "HOLD", 0.75), ("TSLA", "Mean reversion", "BUY", 0.68),
-    ("MSFT", "Momentum", "BUY", 0.88), ("MSFT", "Mean reversion", "SELL", 0.61),
-    ("AMZN", "Momentum", "SELL", 0.71), ("AMZN", "Mean reversion", "HOLD", 0.58),
+    ("AAPL", "Momentum", "BUY", 0.82), ("AAPL", "Mean Reversion", "HOLD", 0.55),
+    ("TSLA", "Momentum", "HOLD", 0.75), ("TSLA", "Mean Reversion", "BUY", 0.68),
+    ("MSFT", "Momentum", "BUY", 0.88), ("MSFT", "Mean Reversion", "SELL", 0.61),
+    ("AMZN", "Momentum", "SELL", 0.71), ("AMZN", "Mean Reversion", "HOLD", 0.58),
 )
 
 def populate_sample_data(session):
@@ -119,7 +119,7 @@ def populate_sample_data(session):
                 select(StockData.date).where(StockData.ticker == ticker)
             ).all()
         )
-        for date, (open_price, high, low, close, volume) in zip(DATES, rows):
+        for date, (open_price, high, close, low, volume) in zip(DATES, rows):  # rows are open, high, close, low, volume
             if date not in existing_dates:
                 session.add(
                     StockData(
