@@ -10,23 +10,25 @@
     </head>
     <body>
         {% block body %}
+        <div class="shell">
         {% block sidebar %}
-        <div class="sidebar-container">
-            <img src="{{ url_for('static', filename='images/logo.svg')}}" alt="JAK logo"/>
-            <div class="sidebar-buttons-container">
-                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.home' }}" href="{{ url_for('dashboard.dashboard')}}">Home</a>
-                {#<a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.stock_search' }}" href="{{ url_for('pages.stock_search')}}">Stock Search</a>#}
-                {#<a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.strategy_search' }}" href="{{ url_for('pages.strategy_search')}}">Strategy Search</a>#}
-                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.watchlist' }}" href="{{ url_for('watchlist.watchlist')}}">Watchlist</a>
-                {#<a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.alerts' }}" href="{{ url_for('pages.alerts')}}">Alerts</a>#}
-                {#<a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.learn' }}" href="{{ url_for('pages.learn')}}">Learn</a>#}
-                {#<a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.settings' }}" href="{{ url_for('pages.settings')}}">Settings</a>#}
-            </div>
-        </div>
+        <aside class="sidebar">
+            <img src="{{ url_for('static', filename='img/logo.svg')}}" alt="JAK logo"/>
+            <nav aria-label="Main">
+                <a class="nav {{ 'active' if request.endpoint == 'dashboard.dashboard' }}" href="{{ url_for('dashboard.dashboard')}}">Home</a>
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.stock_search' }}" href="{{ url_for('pages.stock_search')}}">Stock Search</a>#}
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.strategy_search' }}" href="{{ url_for('pages.strategy_search')}}">Strategy Search</a>#}
+                <a class="nav {{ 'active' if request.endpoint == 'watchlist.watchlist' }}" href="{{ url_for('watchlist.watchlist')}}">Watchlist</a>
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.alerts' }}" href="{{ url_for('pages.alerts')}}">Alerts</a>#}
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.learn' }}" href="{{ url_for('pages.learn')}}">Learn</a>#}
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.settings' }}" href="{{ url_for('pages.settings')}}">Settings</a>#}
+            </nav>
+        </aside>
         {% endblock %}
         <main>
             {% block content %}{% endblock %}
         </main>
+        </div>
         {% endblock %}
         {% block scripts %}{% endblock %}
     </body>

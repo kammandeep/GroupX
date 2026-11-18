@@ -62,7 +62,7 @@ def dashboard():
     
     
     return render_template(
-        'dashboard.html',
+        'dashboard/dashboard.html',
         active_strat=active_strat,
         signals_today=len(todays),
         backtest=backtest,

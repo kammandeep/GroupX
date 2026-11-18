@@ -1,6 +1,6 @@
 import re
 
-from flask import Blueprint, flash, g, render_template, request
+from flask import Blueprint, flash, g, render_template, request, url_for, redirect
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -15,7 +15,10 @@ bp = Blueprint("pages", __name__)
 @bp.route("/")
 @login_required
 def home():
-    return render_template("home.html")
+    if g.user:
+        return redirect(url_for("dashboard.dashboard"))
+
+    return redirect(url_for("auth.login"))
 
 
 @bp.route("/settings", methods=("GET", "POST"))
