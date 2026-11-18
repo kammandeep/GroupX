@@ -8,29 +8,41 @@
     color: var(--text);
 } */
 
+main{
+    min-width: 0;
+}
+
+
 h1 {
     color: var(--text);
     text-align: left;
     font-size: 1.5rem;
-    margin-top: 40px;
     font-weight: bold;
+    margin-top: 0;
 }
 
 h2 {
     color: var(--text);
     text-align: left;
     font-size: 1rem;
-    margin-top: 40px;
     font-weight: bold;
+    margin-top: 0;
 }
 
-/* p {
-    color: var(--text);
-    text-align: left;
-    font-size: .75rem;
-    margin-top: 40px;
-    font-weight: bold;
-} */
+.dashboard{
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dashboard-container{
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
 
 .card-container{
     display: flex;
@@ -40,14 +52,30 @@ h2 {
     margin: 20px;
 }
 
+.card-container--stats{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.card-container--mid{
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
 .display-card{
     background: #212222;
     padding: 20px;
     box-shadow: 0 2px 5px #2b2a2a;
-    width: 200px;
     border-radius: 12px;
-    opacity: 75%;
-    border: var(--border);
+    border: 1px solid var(--border);
+}
+
+.display-card p{
+    font-size: 36px;
+    font-weight: 700;
+    margin-top: 12px;
 }
 
 .mid-card-01{
@@ -55,10 +83,8 @@ h2 {
     flex: 3;
     padding: 20px;
     box-shadow: 0 2px 5px #2b2a2a;
-    width: 200px;
     border-radius: 12px;
-    opacity: 75%;
-    border: var(--border);
+    border: 1px solid var(--border);
 }
 
 .mid-card-02{
@@ -66,14 +92,13 @@ h2 {
     flex: 2;
     padding: 20px;
     box-shadow: 0 2px 5px #2b2a2a;
-    width: 200px;
     border-radius: 12px;
-    border: var(--border);
+    border: 1px solid var(--border);
 }
 
 .mid-card-01-chart-wrap{
     position: relative;
-    min-height: 300px;
+    height: 320px;
 }
 
 .mid-card-02-wrap{
@@ -92,28 +117,28 @@ h2 {
     padding: 12px 16px;
 }
 
-.mid-card-02-insert--symbol{
+.mid-card-02-insert__symbol{
     font-weight: 700;
     font-size: 1rem;
     color: var(--text);
 }
 
-.mid-card-02-insert--name{
+.mid-card-02-insert__name{
     font-size: 0.75rem;
     color: var(--muted);
 }
 
-.mid-card-02-insert--acc{
+.mid-card-02-insert__acc{
     text-align: right;
 }
 
-.mid-card-02-insert--acc-val{
+.mid-card-02-insert__acc-val{
     font-weight: 700;
     font-size: 1rem;
     color: var(--text);
 }
 
-.mid-card-02-insert--acc-lab{
+.mid-card-02-insert__acc-lab{
     font-size: 0.75rem;
     color: var(--muted);
 }
@@ -148,9 +173,8 @@ h2 {
     flex: 5;
     padding: 20px;
     box-shadow: 0 2px 5px #2b2a2a;
-    width: 200px;
     border-radius: 12px;
-    border: var(--border);
+    border: 1px solid var(--border);
 }
 
 .bot-card-head{
@@ -172,40 +196,37 @@ h2 {
 
 .watch-row{
     display: grid;
-    grid-template-columns: 2fr, 1fr, 1fr, 1.5fr, 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr;
     align-items: center;
     gap: 16px;
     min-width: 600px;
     padding: 14px 0;
     border-top: 1px solid var(--border);
-    font-size: .85rem;
 }
 
 .watch-row--head{
     border-top: none;
     padding-top: 8px;
     color: var(--muted);
-    font-size: .75rem;
+    font-size: 13px;
 }
 
 .watch-symbol{
     font-weight: 700;
-    color: var(--text);
     margin-right: 12px;
 }
 
 .watch-name{
     color: var(--muted);
+    font-size: 14px;
 }
 
 .up{ 
     color: var(--green);
-    font-weight: 700;
 }
 
 .down{
     color: var(--red);
-    font-weight: 700;
 }
 
 .watch-empty{
