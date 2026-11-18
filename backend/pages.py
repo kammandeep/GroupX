@@ -8,12 +8,15 @@ from .auth import login_required
 from .db import get_db
 from .models import UserSettings
 from .security import check_csrf
+from .onboarding import onboarding_required
+
 
 bp = Blueprint("pages", __name__)
 
 
 @bp.route("/")
 @login_required
+@onboarding_required
 def home():
     if g.user:
         return redirect(url_for("dashboard.dashboard"))
