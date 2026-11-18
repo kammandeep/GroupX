@@ -12,13 +12,13 @@
         <div class="sidebar-container">
             <img src="{{ url_for('static', filename='images/logo.svg')}}" alt="JAK logo"/>
             <div class="sidebar-buttons-container">
-                <a class="sidebar-buttons" href="">Home</a>
-                <a class="sidebar-buttons" href="">Stock Search</a>
-                <a class="sidebar-buttons" href="">Stratagey Search</a>
-                <a class="sidebar-buttons" href="">Watchlist</a>
-                <a class="sidebar-buttons" href="">Alerts</a>
-                <a class="sidebar-buttons" href="">Learn</a>
-                <a class="sidebar-buttons" href="">Settings</a>
+                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.home' }}" href="{{ url_for('pages.home')}}">Home</a>
+                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.stock_search' }}" href="{{ url_for('pages.stock_search')}}">Stock Search</a>
+                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.strategy_search' }}" href="{{ url_for('pages.strategy_search')}}">Strategy Search</a>
+                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.watchlist' }}" href="{{ url_for('pages.watchlist')}}">Watchlist</a>
+                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.alerts' }}" href="{{ url_for('pages.alerts')}}">Alerts</a>
+                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.learn' }}" href="{{ url_for('pages.learn')}}">Learn</a>
+                <a class="sidebar-buttons {{ 'active' if request.endpoint == 'pages.settings' }}" href="{{ url_for('pages.settings')}}">Settings</a>
             </div>
         </div>
         <main>

@@ -124,19 +124,29 @@ html{
 }
 
 .sidebar-buttons{
-    line-height: 50px;
-    color: #726a6a;
+    padding: 0 16px;
+    border-radius: 10px;
+    color: var(--muted);
     text-decoration: none;
     font-weight: bold;
 }
 
 .sidebar-buttons:hover{
-    background: #F5C542;
-    color: #F4F4F2;
+    background: #cfb15f;
+    color: var(--text);
 }
 
 .sidebar-buttons:active{
-    background: linear-gradient(to right, #F5C542, #131313);
+    background: #cfb15f;
+    opacity: 60%;
+    color: var(--text);
+    box-shadow: 4px 0 0 var(--border);
+}
+
+.sidebar-buttons.active{
+    background: #cfb15f;
+    color: var(--text);
+    box-shadow: inset 4px 0 0 var(--gold);
 }
 
 main{
