@@ -10,6 +10,6 @@ def watchlist():
     rows = queries.watchlist_overview(db.get_db(), g.user.id)
     
     return render_template(
-            'watchlist.watchlist.html',
+            'watchlist/watchlist.html',
             watchlist=rows
         )
