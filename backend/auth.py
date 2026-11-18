@@ -81,9 +81,14 @@ def signup():
             else:
                 session.clear()
                 session["user_id"] = user.id
-                return redirect(url_for("dashboard.dashboard"))
+                return redirect(url_for("onboarding.onboarding"))
 
-    return redirect(url_for("onbaording.onboarding"))
+    return render_template(
+        "auth/signup.html",
+        username=username,
+        email=email,
+        errors=errors
+    ), status
 
 
 @bp.route("/login", methods=("GET", "POST"))
