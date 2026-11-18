@@ -38,6 +38,14 @@ class UserSettings(Base):
     daily_summary = Column(Boolean, default=True, nullable=False)
     strategy_updates = Column(Boolean, default=False, nullable=False)
 
+class UserProfile(Base):
+    __tablename__ = 'user_profiles'
+
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    goal = Column(String(20))               
+    experience_level = Column(String(20))    
+    completed_at = Column(TIMESTAMP)         
+    created_at = Column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 # =========================
 # SECTION 2: COMPANY MODEL

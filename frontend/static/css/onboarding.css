@@ -1,0 +1,59 @@
+.onboarding { display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 50px 24px 48px; text-align: center; }
+
+.onboarding__mark { display: block; height: auto; }
+.onboarding__brand { margin-top: 40px; font-size: 18px; font-weight: 800; line-height: 22px; letter-spacing: 6px; padding-left: 6px; /* balances the trailing letter-spacing */ }
+
+.progress { display: flex; gap: 8px; margin: 38px 0 0; padding: 0; list-style: none; }
+.progress li { width: 128px; height: 6px; border-radius: 3px; background: var(--border); }
+.progress li.is-done { background: var(--gold); }
+
+.onboarding__step { margin-top: 40px; color: var(--muted); font-size: 13px; line-height: 16px; }
+.onboarding__title { margin-top: 16px; font-size: 30px; font-weight: 700; line-height: 36px; }
+.onboarding__sub { margin-top: 10px; color: var(--muted); font-size: 15px; line-height: 22px; }
+
+.onboarding__form { width: 100%; max-width: 1000px; margin-top: 44px; }
+.onboarding__form .form-error { max-width: 520px; margin: 0 auto 20px; }
+
+/* Cards */
+.options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: left; }
+.option { display: block; }
+.option input { position: absolute; opacity: 0; }  /* the whole card is the click target; the real input stays keyboard-focusable */
+.option__card { display: flex; flex-direction: column; min-height: 260px; padding: 25px 25px 37px 27px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 16px; cursor: pointer; }
+.option__card:hover { border-color: #3a3a3a; }
+.option input:checked + .option__card { border-color: var(--gold); background: linear-gradient(rgba(245, 197, 66, .08), rgba(245, 197, 66, .08)), var(--card); }
+.option input:focus-visible + .option__card { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+.option__radio { position: relative; display: block; width: 22px; height: 22px; margin-left: -2px; border: 2px solid var(--muted); border-radius: 50%; }
+.option input:checked + .option__card .option__radio { border-color: var(--gold); }
+.option input:checked + .option__card .option__radio::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--gold); }
+.option input[type="checkbox"] + .option__card .option__radio { border-radius: 6px; } /* stocks: pick many, so squares */
+.option input[type="checkbox"]:checked + .option__card .option__radio::after { border-radius: 2px; }
+
+.option__title { margin-top: 30px; font-size: 22px; font-weight: 700; line-height: 27px; }
+.option__text { margin-top: 10px; color: var(--muted); font-size: 14px; line-height: 20px; }
+.option__tag { margin-top: auto; color: var(--muted); font-size: 13px; font-weight: 600; line-height: 16px; }
+.option input:checked + .option__card .option__tag { color: var(--gold); }
+
+.options--stocks { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.options--stocks .option__card { min-height: 0; padding-bottom: 25px; }
+.options--stocks .option__title { margin-top: 20px; }
+.onboarding__empty { color: var(--muted); font-size: 14px; }
+
+/* Back / Continue */
+.onboarding__actions { display: flex; justify-content: center; gap: 80px; margin-top: 60px; }
+.onboarding__actions .btn { width: 200px; height: 44px; font-size: 14px; }
+.onboarding__actions .btn--outline { border-color: var(--border); }
+
+.onboarding__hint { margin-top: 42px; color: var(--muted); font-size: 13px; line-height: 16px; }
+.onboarding__logout { margin-top: 24px; }
+.onboarding__logout button { background: none; border: 0; color: var(--muted); font: 12px var(--font); text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 960px) {
+  .options { grid-template-columns: 1fr; }
+  .option__card { min-height: 0; }
+  .option__tag { margin-top: 16px; }
+  .progress li { width: 64px; }
+  .onboarding__actions { gap: 16px; }
+  .onboarding__actions .btn { width: 140px; }
+}
