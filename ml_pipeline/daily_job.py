@@ -6,6 +6,7 @@ import torch
 import xgboost as xgb
 from datetime import datetime, timezone
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from .settings import engine, artifacts_path
 from .alpaca import loadHistoricalData
@@ -111,6 +112,13 @@ with engine.begin() as conn:
     live_df = live_df[live_df["_hit"].isna()].drop(columns="_hit")
     
     live_df.to_sql("predictions", conn, if_exists="append", index=False)
+
+    live_predictions = live_df.to_dict("records")
+
+with Session(engine) as session:
+    from backend.alerts import create_live_prediction_signals
+
+    created_signals = create_live_prediction_signals(session, live_predictions)
     
 print(f"Wrote {len(live_df)} live prediction rows to the predictions table for {prediction_date}")
 

@@ -15,11 +15,13 @@
       <div class="alerts-topbar">
         <label class="search" aria-label="Search ticker or strategy">
           <span aria-hidden="true">⌕</span>
-          <input type="search" placeholder="Search ticker or strategy">
+          <input id="alert-search" type="search" placeholder="Search ticker or strategy">
         </label>
         <div class="topbar__user">
           <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
           <span>{{ g.user.username }}</span>
+          <button id="enable-browser-alerts" class="btn btn-outline notification-enable" type="button">Enable notifications</button>
+          <span id="unread-alert-count" class="unread-badge" aria-label="Unread alerts">{{ alert_items|selectattr('is_read', 'equalto', false)|list|length }}</span>
           <form method="post" action="{{ url_for('auth.logout') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-outline" type="submit">Log out</button>
@@ -29,54 +31,92 @@
     </header>
 
     <nav class="alert-tabs" aria-label="Alert filters">
-      <a class="{{ 'is-active' if not unread_only else '' }}" href="{{ url_for('pages.alerts') }}">All</a>
-      <a class="{{ 'is-active' if unread_only else '' }}" href="{{ url_for('pages.alerts', filter='unread') }}">Unread</a>
-      <a href="#active-rules">Rules</a>
+      <a class="{{ 'is-active' if not unread_only and not read_only else '' }}" href="{{ url_for('pages.alerts') }}">All</a>
+      <a class="{{ 'is-active' if read_only else '' }}" href="{{ url_for('pages.alerts', filter='read') }}">Read</a>
     </nav>
 
     <div class="alerts-layout">
-      <section class="alert-feed" aria-label="Alert activity">
-        {% for item in alert_items %}
-        <article class="alert-item">
-          <span class="alert-dot alert-dot--{{ item.tone }}{% if not item.is_read %} is-unread{% endif %}" aria-hidden="true"></span>
-          <div class="alert-item__body">
-            <strong>{{ item.title }}</strong>
-            <p>{{ item.detail }}</p>
+      <div class="alerts-main">
+        <section class="alert-feed" aria-label="Alert activity">
+          {% for item in alert_items %}
+          <article class="alert-item">
+            <span class="alert-dot alert-dot--{{ item.tone }}{% if not item.is_read %} is-unread{% endif %}" aria-hidden="true"></span>
+            <div class="alert-item__body">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.detail }}</p>
+            </div>
+            <time>{{ item.created_at }}</time>
+            {% if not item.is_read %}
+            <form method="post" class="mark-read-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="read">
+              <input type="hidden" name="event_id" value="{{ item.id }}">
+              <button class="read-alert" type="submit">Mark read</button>
+            </form>
+            {% endif %}
+          </article>
+          {% else %}
+          <div class="alert-empty">
+            {% if read_only %}
+            <strong>No read notifications yet</strong>
+            <p>Notifications you mark as read will stay saved here.</p>
+            {% elif unread_only %}
+            <strong>No unread notifications</strong>
+            <p>You're all caught up.</p>
+            {% else %}
+            <strong>No alerts yet</strong>
+            <p>New signal changes will appear here when they are generated.</p>
+            {% endif %}
           </div>
-          <time>{{ item.created_at }}</time>
-          {% if not item.is_read %}
-          <form method="post">
+          {% endfor %}
+          {% if alert_items and not read_only %}
+          <form class="mark-all-form" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="action" value="read">
-            <input type="hidden" name="event_id" value="{{ item.id }}">
-            <button class="read-alert" type="submit">Mark read</button>
+            <input type="hidden" name="action" value="read_all">
+            <button class="delete-rule" type="submit">Mark all read</button>
           </form>
           {% endif %}
-        </article>
-        {% else %}
-        <div class="alert-empty">
-          <strong>No alerts yet</strong>
-          <p>New signal changes will appear here when they are generated.</p>
-        </div>
-        {% endfor %}
-        {% if alert_items and unread_only %}
-        <form class="mark-all-form" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="action" value="read_all">
-          <button class="delete-rule" type="submit">Mark all read</button>
-        </form>
-        {% endif %}
-      </section>
+        </section>
+
+        <section class="popular-alert-card" aria-label="Popular stocks">
+          <div class="popular-alert-card__heading">
+            <h2>Popular stocks</h2>
+            <p class="muted">Quickly add a Buy or Sell signal alert.</p>
+          </div>
+          {% set rule_tickers = namespace(values=[]) %}
+          {% for rule in rules %}
+            {% set rule_tickers.values = rule_tickers.values + [rule.ticker] %}
+          {% endfor %}
+          <div class="popular-stock-grid">
+            {% for stock in popular_stocks %}
+            <form method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="quick_add">
+              <input type="hidden" name="ticker" value="{{ stock.ticker }}">
+              <button class="popular-stock{% if stock.ticker in rule_tickers.values %} is-added{% endif %}"
+                      type="submit"
+                      {% if stock.ticker in rule_tickers.values %}disabled{% endif %}>
+                <strong>{{ stock.ticker }}</strong>
+                <span>{{ 'Added' if stock.ticker in rule_tickers.values else '+ Add alert' }}</span>
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
 
       <aside class="alerts-side">
         <section class="alert-card">
-          <h2>New alert rule</h2>
+          <h2>Add new alert</h2>
           {% if errors.form %}<p class="form-error">{{ errors.form }}</p>{% endif %}
           <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="field{% if errors.ticker %} field--error{% endif %}">
               <label for="ticker">Stock</label>
-              <input id="ticker" name="ticker" value="{{ form.get('ticker', '') }}" placeholder="NVDA" required>
+                <div class="ticker-search">
+                  <input id="ticker" name="ticker" value="{{ form.get('ticker', '') }}" placeholder="Search ticker or company" autocomplete="off" aria-controls="ticker-suggestions" aria-expanded="false" required>
+                  <div id="ticker-suggestions" class="ticker-suggestions" role="listbox" hidden></div>
+                </div>
               {% if errors.ticker %}<p class="field__msg field__msg--error">{{ errors.ticker }}</p>{% endif %}
             </div>
             <div class="field{% if errors.condition %} field--error{% endif %}">
@@ -94,7 +134,7 @@
         </section>
 
         <section class="alert-card" id="active-rules">
-          <h2>Active rules</h2>
+          <h2>Active alerts</h2>
           {% for rule in rules %}
           <form class="rule-row" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -112,4 +152,185 @@
       </aside>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+<div id="live-alert-toast" class="live-alert-toast" role="status" aria-live="polite" hidden>
+  <strong id="live-alert-title"></strong>
+  <span id="live-alert-detail"></span>
+</div>
+<script>
+  const alertFeed = document.querySelector('.alert-feed');
+  const unreadBadge = document.getElementById('unread-alert-count');
+  const toast = document.getElementById('live-alert-toast');
+  const toastTitle = document.getElementById('live-alert-title');
+  const toastDetail = document.getElementById('live-alert-detail');
+  let knownAlertIds = new Set(Array.from(document.querySelectorAll('[data-alert-id]')).map(el => Number(el.dataset.alertId)));
+  const appNotificationsEnabled = {{ 'true' if app_notifications else 'false' }};
+  const browserPreferenceKey = 'groupx-browser-alerts-enabled';
+  const tickerInput = document.getElementById('ticker');
+  const tickerSuggestions = document.getElementById('ticker-suggestions');
+  let tickerSearchTimer;
+
+  function hideTickerSuggestions() {
+    tickerSuggestions.hidden = true;
+    tickerInput.setAttribute('aria-expanded', 'false');
+  }
+
+  function showTickerSuggestions(stocks) {
+    tickerSuggestions.replaceChildren();
+    if (!stocks.length) {
+      hideTickerSuggestions();
+      return;
+    }
+
+    stocks.forEach((stock, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ticker-suggestion';
+      button.setAttribute('role', 'option');
+      button.dataset.ticker = stock.ticker;
+      const ticker = document.createElement('strong');
+      ticker.textContent = stock.ticker;
+      const name = document.createElement('span');
+      name.textContent = stock.name;
+      button.append(ticker, name);
+      button.addEventListener('click', () => {
+        tickerInput.value = stock.ticker;
+        hideTickerSuggestions();
+        tickerInput.focus();
+      });
+      tickerSuggestions.appendChild(button);
+    });
+    tickerSuggestions.hidden = false;
+    tickerInput.setAttribute('aria-expanded', 'true');
+  }
+
+  tickerInput.addEventListener('input', () => {
+    window.clearTimeout(tickerSearchTimer);
+    const query = tickerInput.value.trim();
+    if (!query) {
+      hideTickerSuggestions();
+      return;
+    }
+    tickerSearchTimer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`{{ url_for("pages.alert_stock_search") }}?q=${encodeURIComponent(query)}`);
+        if (!response.ok) return;
+        showTickerSuggestions((await response.json()).stocks);
+      } catch (_error) {
+        hideTickerSuggestions();
+      }
+    }, 150);
+  });
+
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.ticker-search')) hideTickerSuggestions();
+  });
+  tickerInput.addEventListener('keydown', event => {
+    if (event.key === 'Escape') hideTickerSuggestions();
+  });
+
+  function showReadConfirmation(title) {
+    toastTitle.textContent = 'READ';
+    toastDetail.textContent = title;
+    toast.hidden = false;
+    window.clearTimeout(showReadConfirmation.timeout);
+    showReadConfirmation.timeout = window.setTimeout(() => { toast.hidden = true; }, 4000);
+  }
+
+  function showLiveAlert(alert) {
+    toastTitle.textContent = alert.title;
+    toastDetail.textContent = alert.detail;
+    toast.hidden = false;
+    window.clearTimeout(showLiveAlert.timeout);
+    showLiveAlert.timeout = window.setTimeout(() => { toast.hidden = true; }, 7000);
+
+    const browserAlertsEnabled = localStorage.getItem(browserPreferenceKey) === 'true';
+    if (appNotificationsEnabled && browserAlertsEnabled &&
+        'Notification' in window && Notification.permission === 'granted') {
+      new Notification(alert.title, { body: alert.detail });
+    }
+  }
+
+  async function refreshAlerts() {
+    try {
+      const response = await fetch('{{ url_for("pages.alert_status") }}', { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) return;
+      const data = await response.json();
+      unreadBadge.textContent = data.unread_count;
+      unreadBadge.hidden = data.unread_count === 0;
+
+      const newAlerts = data.alerts.filter(alert => !knownAlertIds.has(alert.id) && !alert.is_read);
+      newAlerts.forEach(showLiveAlert);
+      data.alerts.forEach(alert => knownAlertIds.add(alert.id));
+    } catch (_error) {}
+  }
+
+  const notificationButton = document.getElementById('enable-browser-alerts');
+  if ('Notification' in window) {
+    let browserAlertsEnabled = localStorage.getItem(browserPreferenceKey) === 'true';
+    notificationButton.textContent = browserAlertsEnabled ? 'Disable notifications' : 'Enable notifications';
+    notificationButton.addEventListener('click', async () => {
+      if (browserAlertsEnabled) {
+        localStorage.setItem(browserPreferenceKey, 'false');
+        browserAlertsEnabled = false;
+        notificationButton.textContent = 'Enable notifications';
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      browserAlertsEnabled = permission === 'granted';
+      localStorage.setItem(browserPreferenceKey, browserAlertsEnabled ? 'true' : 'false');
+      notificationButton.textContent = browserAlertsEnabled ? 'Disable notifications' : 'Enable notifications';
+    });
+  } else {
+    notificationButton.hidden = true;
+  }
+
+  document.getElementById('alert-search').addEventListener('input', event => {
+    const query = event.target.value.trim().toLowerCase();
+    document.querySelectorAll('.alert-item').forEach(item => {
+      item.hidden = query !== '' && !item.textContent.toLowerCase().includes(query);
+    });
+  });
+
+  document.querySelectorAll('.mark-read-form').forEach(form => {
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const item = form.closest('.alert-item');
+      const title = item.querySelector('.alert-item__body strong').textContent.trim();
+      const response = await fetch('{{ url_for("pages.alerts") }}', {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!response.ok) return;
+
+      item.classList.add('is-read');
+      item.querySelector('.alert-dot')?.classList.remove('is-unread');
+      form.replaceWith(Object.assign(document.createElement('span'), {
+        className: 'read-label',
+        textContent: 'READ'
+      }));
+      showReadConfirmation(title);
+      refreshAlerts();
+    });
+  });
+
+  document.querySelectorAll('.alert-item').forEach((item, index) => {
+    item.dataset.alertId = {{ alert_items|map(attribute='id')|list|tojson }}[index];
+  });
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  {% if category in ['success', 'error'] %}
+  toastTitle.textContent = {{ ("Alert added" if category == "success" else "Alert not added")|tojson }};
+  toastDetail.textContent = {{ message|tojson }};
+  toast.hidden = false;
+  window.setTimeout(() => { toast.hidden = true; }, 5000);
+  {% endif %}
+  {% endfor %}
+  {% endwith %}
+  refreshAlerts();
+  window.setInterval(refreshAlerts, 15000);
+</script>
 {% endblock %}
