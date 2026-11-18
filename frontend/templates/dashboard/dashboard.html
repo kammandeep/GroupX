@@ -18,22 +18,22 @@
         </form>
       </div>
     </header>
-<div class="container">
-    <div class="card-container">
+    <div class="container">
+        <div class="card-container">
+            <div class="display-card">
+                <h2>Active Strategies</h2>
+                <p>{{ active_strat }}</p>
+            </div>
         <div class="display-card">
-            <h2>Card 1</h2>
-            <p>{{ active_strat }}</p>
-        </div>
-        <div class="display-card">
-            <h2>Card 2</h2>
+            <h2>Today's Signals</h2>
             <p>{{ signals_today }}</p>
         </div>
         <div class="display-card">
-            <h2>Card 3</h2>
+            <h2>Average Backtest Accuracy</h2>
             <p>{{ backtest }}</p>
         </div>
         <div class="display-card">
-            <h2>Card 4</h2>
+            <h2>Watchlist</h2>
             <p>{{ watchlist_count }}</p>
         </div>
     </div>
@@ -69,7 +69,7 @@
         <div class="bot-card">
             <div class="bot-card-head">
                 <h2>Your watchlist</h2>
-                <a class="link-gold" href="">View all </a>
+                <a class="link-gold" href="{{ url_for('watchlist.watchlist')}}">View all </a>
             </div>
 
         <div class="watch-table">
@@ -89,7 +89,7 @@
                     </div>
                     <span>${{  "%.2f"|format(stock.price) }}</span>
                     <span class="{{ 'up' if stock.change_pct >= 0 else 'down' }}">
-                        {{ "%+.1f|format(stock.change_pct)" }}%
+                        {{ "%+.1f"|format(stock.change_pct) }}%
                     </span>
                     <span>{{ stock.best_strategy }}</span>
                     <span><span class="mid-card-02-pill pill--{{ stock.signal_type|lower }}">{{ stock.signal_type|upper }}</span></span>
@@ -97,9 +97,10 @@
             {% else %}
             <p>Nothing currently on your watchlist</p>
             {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
-</div>
 </div>
 {% endblock %}
 

@@ -43,7 +43,7 @@ def login_required(view):
 @bp.route("/signup", methods=("GET", "POST"))
 def signup():
     if g.user:
-        return redirect(url_for("pages.home"))
+        return redirect(url_for("dashboard.dashboard"))
 
     username = email = ""
     errors = {}
@@ -81,15 +81,15 @@ def signup():
             else:
                 session.clear()
                 session["user_id"] = user.id
-                return redirect(url_for("pages.home"))
+                return redirect(url_for("dashboard.dashboard"))
 
-    return render_template("auth/signup.html", username=username, email=email, errors=errors), status
+    return redirect(url_for("onbaording.onboarding"))
 
 
 @bp.route("/login", methods=("GET", "POST"))
 def login():
     if g.user:
-        return redirect(url_for("pages.home"))
+        return redirect(url_for("dashboard.dashboard"))
 
     email = ""
     errors = {}
@@ -113,7 +113,7 @@ def login():
             db.commit()
             session.clear()
             session["user_id"] = user.id
-            return redirect(url_for("pages.home"))
+            return redirect(url_for("dashboard.dashboard"))
 
     return render_template("auth/login.html", email=email, errors=errors), status
 

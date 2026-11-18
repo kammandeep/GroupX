@@ -1,0 +1,36 @@
+{
+  "version": "v1",
+  "future_predictions": [
+    "Close_Ratio_2",
+    "Trend_2",
+    "Volatility_2",
+    "Close_Ratio_5",
+    "Trend_5",
+    "Volatility_5",
+    "Close_Ratio_50",
+    "Trend_50",
+    "Volatility_50",
+    "Close_Ratio_250",
+    "Trend_250",
+    "Volatility_250"
+  ],
+  "lstm_features": [
+    "Close_Ratio_2",
+    "Trend_2",
+    "Volatility_2",
+    "Close_Ratio_5",
+    "Trend_5",
+    "Volatility_5",
+    "Close_Ratio_50",
+    "Trend_50",
+    "Volatility_50",
+    "Close_Ratio_250",
+    "Trend_250",
+    "Volatility_250",
+    "xgb_prob"
+  ],
+  "sequence_len": 20,
+  "hidden_dim": 100,
+  "layer_dim": 1,
+  "typical_move": 0.01134653417482967
+}

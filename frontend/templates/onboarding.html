@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/onboarding.css') }}">{% endblock %}
+
+{% block body %}
+<main class="onboarding">
+  <img class="onboarding__mark" src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="130">
+  <p class="onboarding__brand">JAK</p>
+
+  <ol class="progress" aria-label="Progress">
+    {% for n in range(1, total + 1) %}<li{% if n <= number %} class="is-done"{% endif %}></li>{% endfor %}
+  </ol>
+  <p class="onboarding__step">Step {{ number }} of {{ total }}</p>
+
+  <h1 class="onboarding__title">{{ step.title }}</h1>
+  <p class="onboarding__sub">{{ step.subtitle }}</p>
+
+  <form class="onboarding__form" method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+    {% if step.kind == "choice" %}
+      <div class="options" role="radiogroup" aria-label="{{ step.title }}">
+        {% for option in step.options %}
+          <label class="option">
+            <input type="radio" name="{{ step.key }}" value="{{ option.value }}"{% if option.value == picked %} checked{% endif %}>
+            <span class="option__card">
+              <span class="option__radio" aria-hidden="true"></span>
+              <span class="option__title">{{ option.title }}</span>
+              <span class="option__text">{{ option.text }}</span>
+              {% if option.tag %}<span class="option__tag">{{ option.tag }}</span>{% endif %}
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+    {% else %}
+      {% if stocks %}
+        <div class="options options--stocks">
+          {% for ticker, name in stocks %}
+            <label class="option">
+              <input type="checkbox" name="tickers" value="{{ ticker }}"{% if ticker in picked %} checked{% endif %}>
+              <span class="option__card">
+                <span class="option__radio" aria-hidden="true"></span>
+                <span class="option__title">{{ ticker }}</span>
+                <span class="option__text">{{ name }}</span>
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="onboarding__empty">No stocks are available yet. You can add some to your watchlist later.</p>
+      {% endif %}
+    {% endif %}
+
+    <div class="onboarding__actions">
+      {% if number > 1 %}
+        <a class="btn btn--outline" href="{{ url_for('onboarding.step', number=number - 1) }}">Back</a>
+      {% endif %}
+      <button class="btn btn--primary" type="submit">{{ "Finish" if number == total else "Continue" }}</button>
+    </div>
+  </form>
+
+  <p class="onboarding__hint">{{ step.hint }}</p>
+
+  <form class="onboarding__logout" method="post" action="{{ url_for('auth.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Not you? Log out</button>
+  </form>
+</main>
+{% endblock %}

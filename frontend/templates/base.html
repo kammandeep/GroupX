@@ -1,19 +1,35 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}JAK{% endblock %} · JAK</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
-  {% block head %}{% endblock %}
-</head>
-<body>
-  {% block body %}
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-  {% endblock %}
-  {% block scripts %}{% endblock %}
-</body>
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %} Project JAK {% endblock %}</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        {% block head %}{% endblock %}
+    </head>
+    <body>
+        {% block body %}
+        <div class="shell">
+        {% block sidebar %}
+        <aside class="sidebar">
+            <img src="{{ url_for('static', filename='img/logo.svg')}}" alt="JAK logo"/>
+            <nav aria-label="Main">
+                <a class="nav {{ 'active' if request.endpoint == 'dashboard.dashboard' }}" href="{{ url_for('dashboard.dashboard')}}">Home</a>
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.stock_search' }}" href="{{ url_for('pages.stock_search')}}">Stock Search</a>#}
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.strategy_search' }}" href="{{ url_for('pages.strategy_search')}}">Strategy Search</a>#}
+                <a class="nav {{ 'active' if request.endpoint == 'watchlist.watchlist' }}" href="{{ url_for('watchlist.watchlist')}}">Watchlist</a>
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.alerts' }}" href="{{ url_for('pages.alerts')}}">Alerts</a>#}
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.learn' }}" href="{{ url_for('pages.learn')}}">Learn</a>#}
+                {#<a class="nav {{ 'active' if request.endpoint == 'pages.settings' }}" href="{{ url_for('pages.settings')}}">Settings</a>#}
+            </nav>
+        </aside>
+        {% endblock %}
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        </div>
+        {% endblock %}
+        {% block scripts %}{% endblock %}
+    </body>
 </html>

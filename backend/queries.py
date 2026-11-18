@@ -53,8 +53,10 @@ def latest_signals(session, ticker=None, strategy_id=None):
 
     newest_day = select(func.max(TradingSignal.signal_date)).scalar_subquery()
     query = (
-        select(TradingSignal, Strategy.name)
+        select(TradingSignal, Strategy.name, Company.name)
         .join(Strategy, Strategy.id == TradingSignal.strategy_id)
+        .join(Stock, Stock.ticker == TradingSignal.ticker)
+        .join(Company, Company.id == Stock.company_id)
         .where(TradingSignal.signal_date == newest_day, Strategy.is_active.is_(True))
         .order_by(TradingSignal.ticker, Strategy.name)
     )
@@ -65,10 +67,10 @@ def latest_signals(session, ticker=None, strategy_id=None):
 
     return [
         {
-            "ticker": s.ticker, "strategy": strategy_name, "signal": s.signal_type,
+            "ticker": s.ticker, "company_name":company_name, "strategy": strategy_name, "signal": s.signal_type,
             "confidence": s.confidence_score, "target_price": s.target_price, "date": s.signal_date,
         }
-        for s, strategy_name in session.execute(query)
+        for s, strategy_name, company_name in session.execute(query)
     ]
 
 """Newest forecast from each model for one stock."""

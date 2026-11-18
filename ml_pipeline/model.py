@@ -12,7 +12,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, text
-import uuid
 from pathlib import Path
 
 load_dotenv()
@@ -51,14 +50,16 @@ def UniversalTry(url):
         print(f"Something has gone horribly wrong {e}")
         exit()
 
-db_path = Path(__file__).parent / "GroupX.db"
-    
-engine = create_engine(f"sqlite:///{db_path}")    
+db_path = Path(__file__).parent.parent / "instance" / "groupx.sqlite3"
+print("GroupX/instance ", db_path, db_path.exists())
+assert db_path.exists(), f"Database not found at {db_path}"
+
+engine = create_engine(f"sqlite:///{db_path.as_posix()}")    
     
 # Call to grab historical data from the past 10 years for top 5 companies
 def fetchHistoricalData():
     print("Getting Historical Data")
-    url = "https://data.alpaca.markets/v2/stocks/auctions?symbols=NVDA%2CMSFT%2CAMZN%2CGOOGL%2CAAPL&start=2016-10-20T00%3A00%3A00Z&end=2026-10-20T00%3A00%3A00Z&limit=10000&feed=sip"
+    url = "https://data.alpaca.markets/v2/stocks/bars?symbols=AAPL%2CAMZN%2CGOOGL%2CMSFT%2CNVDA&timeframe=1D&start=2016-11-15T01%3A02%3A03.123456789Z&limit=1000&adjustment=raw&feed=sip&sort=asc"
     rows = []
     token = ""
     
@@ -69,30 +70,17 @@ def fetchHistoricalData():
             updatedUrl = url
         data = UniversalTry(updatedUrl).json()
         
-        for symbol, days in data["auctions"].items():
-            for day in days:
-                for trade in day.get("o") or []:
-                    rows.append({
+        for symbol, bars in (data.get("bars") or {}).items():
+            for b in bars:
+                rows.append({
                             "symbol":symbol,
-                            "date":day["d"],
-                            "auction":"open",
-                            "condition": trade["c"],
-                            "price": trade["p"],
-                            "size": trade["s"],
-                            "timestamp": trade["t"],
-                            "exchange":trade["x"]
+                            "date":b["t"][:10],
+                            "open": b["o"],
+                            "high": b["h"],
+                            "low": b["l"],
+                            "close": b["c"],
+                            "volume":b["v"]
                             })
-                for trade in day.get("c") or []:
-                    rows.append({
-                            "symbol":symbol,
-                            "date":day["d"],
-                            "auction":"close",
-                            "condition": trade["c"],
-                            "price": trade["p"],
-                            "size": trade["s"],
-                            "timestamp": trade["t"],
-                            "exchange":trade["x"]
-                        })
         token = data.get("next_page_token")
         if not token:
             break
@@ -100,18 +88,14 @@ def fetchHistoricalData():
 
 # Function to check if the CSV exists and to create a new one if not
 def checkCSV():
-    if not os.path.exists("HistoricalData.csv"):
+    if not os.path.exists("Historicalbars.csv"):
         print("No file exists by this name, creating now")
         df = fetchHistoricalData()
-        df.to_csv("HistoricalData.csv", index=False)
+        df.to_csv("Historicalbars.csv", index=False)
 
 checkCSV()
-df = pd.read_csv("HistoricalData.csv")
+df = pd.read_csv("Historicalbars.csv")
 
-
-print(df.shape)
-
-df.info()
 
 print(df.isnull().sum())
 
@@ -129,66 +113,39 @@ print(df.index.duplicated().sum())
 
 # create sql columns and ready db to be saved to sql database
 def build_daily(df):
-    df = df[~df["condition"].str.contains("M", na=False)]
-    df = (df.sort_values(["symbol", "date", "auction", "size", "timestamp"]).drop_duplicates(["symbol", "date", "auction"], keep="last"))
+    dfOut = df.rename(columns={"symbol": "ticker"}).copy()
     
-    wide = (df.pivot(index=["symbol", "date"], columns="auction", values="price").reset_index().rename(columns={"symbol": "ticker"}))
-    wide.columns.name = None
-    
-    wide["id"] = [str(uuid.uuid4()) for _ in range(len(wide))]
-    wide["created_at"] = datetime.now(timezone.utc)
-    wide["date"] = pd.to_datetime(wide["date"]).dt.date
-    return wide[["id", "ticker", "date", "open", "close", "created_at"]]
+    dfOut["created_at"] = datetime.now(timezone.utc)
+    dfOut["date"] = pd.to_datetime(dfOut["date"]).dt.date
+    return dfOut[["ticker", "date", "open", "high", "low", "close", "volume", "created_at"]]
 
-create_sql = """
-    CREATE TABLE IF NOT EXISTS stock_data(
-      id VARCHAR(36) PRIMARY KEY,
-      ticker VARCHAR(10) NOT NULL,
-      date DATE NOT NULL,
-      open REAL,
-      close REAL,
-      created_at TIMESTAMP NOT NULL,
-      UNIQUE (ticker, date)
-    )"""
+def loadHistoricalData():
+    with engine.begin() as conn:
+        count = conn.execute(text("SELECT COUNT(*) FROM stock_data")).scalar()
+        
+    if count == 0:
+        print("stock_data is empty, downloading new set")
+        daily = build_daily(fetchHistoricalData())
+        daily.to_sql("stock_data", engine, if_exists="append", index=False, chunksize=1000)
+        
+    return pd.read_sql(
+        text("SELECT ticker AS symbol, date, close AS price "
+             "FROM stock_data ORDER BY ticker, date"), engine, parse_dates=["date"]
+    )
 
-with engine.begin() as conn:
-    conn.execute(text("DROP TABLE IF EXISTS stock_data"))
-    conn.execute(text(create_sql))
-    
-daily = build_daily(df)
-daily.to_sql("stock_data", engine, if_exists="append", index=False, chunksize=1000)
+
 
 #======================================================
 # PRE-PROCESSING FOR ML - XGBOOST
 #======================================================
 
-dfClose = df[df['auction'].str.contains('open') == False]
-dfClose = dfClose[dfClose['condition'].str.contains("M") == False]
-print(dfClose.duplicated(subset=["symbol", "date"]).sum())
-
-dfCloseFinal = dfClose.sort_values(['symbol', 'date', 'size', 'timestamp'], ascending=True).drop_duplicates(['symbol', 'date'], keep="last")
-dfCloseFinal.to_csv("HistoricalDataClose.csv", index=False)
-
-# df = pd.read_csv("HistoricalDataClose.csv")
-print(dfCloseFinal.info())
+dfCloseFinal = loadHistoricalData()
 print(dfCloseFinal.shape)
-print(dfCloseFinal.describe())
-print("Missing Values: ")
-print(dfCloseFinal.isnull().sum())
-print("Duplicates: ")
+print(dfCloseFinal.isnull().sum)
 print(dfCloseFinal.duplicated(subset=["symbol", "date"]).sum())
 
 
-# convert date columnt to datetime type
-dfCloseFinal['date'] = pd.to_datetime(dfCloseFinal["date"], format='%Y-%m-%d')
-
-# sort the csv by symbols then by date
-dfCloseFinal = dfCloseFinal.sort_values(['symbol', 'date'], ascending=True)
-
-# reset the index for the dataframe
-dfCloseFinal = dfCloseFinal.reset_index(drop=True)
-
-dfCloseFinal.to_csv("HistoricalDataCloseFinal.csv", index=False)
+dfCloseFinal = dfCloseFinal.sort_values(["symbol", "date"]).reset_index(drop=True)
 
 #======================================================
 # CALCULATE THE TARGET - DAYS
@@ -238,6 +195,7 @@ print(dfCloseFinal.sort_values('day_percentage_change', ascending=False).head(20
 dfCloseFinal['symbol'] = dfCloseFinal['symbol'].map({'AAPL': 0, 'AMZN' : 1,'GOOGL': 2, 'MSFT': 3, 'NVDA': 4})
 
 dfCloseFinal['next_day'] = dfCloseFinal.groupby('symbol')['price'].shift(-1)
+dfCloseFinal['next_date'] = dfCloseFinal.groupby('symbol')['date'].shift(-1)
 
 dfCloseFinal['up_day'] = (dfCloseFinal['day_percentage_change'] > 0).astype(int)
 
@@ -306,9 +264,8 @@ validate_model['xgb_prob'] = val_proba
 test_model['xgb_prob'] = test_proba
 
 # SAVE OUT EVALUATION AND TEST PREDICTIONS TO CSV FILES
-keep = ['symbol', 'date'] + future_predictions + ['xgb_prob', 'target_day']
-validate_model[keep].to_csv("xgb_val_predictions.csv", index=False)
-test_model[keep].to_csv("xgb_test_predictions.csv", index=False)
+keep = ['symbol', 'date', 'price', 'next_day', 'next_date'] + future_predictions + ['xgb_prob', 'target_day']
+
 
 #======================================================
 # SET, TRAIN AND TEST THE DL MODEL - LSTM
@@ -341,12 +298,18 @@ def make_sequences(df, features, target, sequence_len, start=None, end=None):
     d = []
     raw_prob = []
     syms = []
+    price = []
+    next_close = []
+    next_date = []
     for sym, g in df.groupby('symbol'):
         g = g.sort_values('date')
         f = g[features].values
         t = g[target].values
         p = g['xgb_prob_raw'].values
         dates = g['date'].values
+        prc = g['price'].values
+        nc = g['next_day'].values
+        nd = g['next_date'].values
         for i in range(sequence_len - 1, len(g)):
             if start is not None and dates[i] <= start:
                 continue
@@ -357,12 +320,18 @@ def make_sequences(df, features, target, sequence_len, start=None, end=None):
             d.append(dates[i])
             syms.append(sym)
             raw_prob.append(p[i])
+            price.append(prc[i])
+            next_close.append(nc[i])
+            next_date.append(nd[i])
     return {
         "X": np.array(X),
         "y": np.array(y),
         "raw_prob": np.array(raw_prob),
         "dates":np.array(d),
         "syms":np.array(syms),
+        "price":np.array(price),
+        "next_close":np.array(next_close),
+        "next_date":np.array(next_date),
     }
     
 dl_train = make_sequences(all_df, lstm_features, target, sequence_len, end=cut)
@@ -456,15 +425,22 @@ symbol_map_reverse = {0:'AAPL',1:'AMZN',2:'GOOGL',3:'MSFT',4:'NVDA'}
 
 created_at = datetime.now(timezone.utc)
 
+with engine.connect() as conn:
+    print(conn.execute(text("SELECT sql FROM sqlite_master WHERE name = 'predictions'")).scalar())
+    
+typical_move = train_model["day_percentage_change"].abs().median() /100
+
 def build_export(model_name, probs):
     preds = (probs >0.5).astype(int)
+    price = dl_test['price']
     return pd.DataFrame({
         "ticker" : pd.Series(dl_test["syms"]).map(symbol_map_reverse).values,
         "prediction_date" : pd.to_datetime(dl_test["dates"]).strftime("%Y-%m-%d"),
-        "predicted_close" : np.where(preds == 1, "up", "down"),
-        "actual_close" : np.where(dl_test["y"] == 1, "up", "down"),
+        "predicted_close" : np.where(preds == 1, price * (1 + typical_move), price *(1 - typical_move)).round(2),
+        "actual_close" : dl_test['next_close'].round(2),
         "confidence_score" : np.where(preds == 1, probs, 1 - probs).round(4),
         "direction" : np.where(preds == 1, "up", "down"),
+        "prediction_type" : "next_day",
         "model_name" : model_name,
         "created_at" : created_at,
     })
@@ -474,25 +450,9 @@ export_df = pd.concat([
     build_export("xgboost_lstm", test_prob),
 ], ignore_index=True)
 
-export_df["prediction_date"] = pd.to_datetime(export_df["prediction_date"]).dt.date
-
 export_df = export_df.sort_values(["prediction_date", "ticker", "model_name"]).reset_index(drop=True)
 
-create_table_sql = """
-CREATE TABLE IF NOT EXISTS predictions(
-    ticker VARCHAR(10) NOT NULL,
-    prediction_date DATE NOT NULL,
-    predicted_close VARCHAR(4) NOT NULL,
-    actual_close VARCHAR(4),
-    confidence_score FLOAT NOT NULL,
-    direction VARCHAR(4) NOT NULL,
-    model_name VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    UNIQUE (ticker, prediction_date, model_name)
-    )"""
-
 with engine.begin() as conn:
-    conn.execute(text(create_table_sql))
     
     conn.execute(
         text(
@@ -503,5 +463,8 @@ with engine.begin() as conn:
     
     export_df.to_sql("predictions", conn, if_exists="append", index=False, chunksize=1000)
 
+
+    
+print(dfCloseFinal.groupby("symbol")["date"].agg(["min", "max", "count"]))
 
 print(f"Wrote {len(export_df)} rows to the predictions table")
