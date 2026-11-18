@@ -14,12 +14,12 @@
         <span>{{ g.user.username }}</span>
         <form method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn--outline btn--small" type="submit">Log out</button>
+          <button class="btn btn-outline" type="submit">Log out</button>
         </form>
       </div>
     </header>
-    <div class="container">
-        <div class="card-container">
+    <div class="dashboard-container">
+        <div class="card-container--stats">
             <div class="display-card">
                 <h2>Active Strategies</h2>
                 <p>{{ active_strat }}</p>
@@ -30,14 +30,14 @@
         </div>
         <div class="display-card">
             <h2>Average Backtest Accuracy</h2>
-            <p>{{ backtest }}</p>
+            <p>{{ backtest }}%</p>
         </div>
         <div class="display-card">
             <h2>Watchlist</h2>
             <p>{{ watchlist_count }}</p>
         </div>
     </div>
-    <div class="card-container">
+    <div class="card-container--mid">
         <div class="mid-card-01">
             <h2>NASDAQ-100 vs JAK Momentum Strategy</h2>
             <div class="mid-card-01-chart-wrap">
@@ -57,7 +57,7 @@
                         <div class="mid-card-02-insert__acc-val">{{ signal.accuracy|round|int }}%</div>
                         <div class="mid-card-02-insert__acc-lab">accuracy</div>
                     </div>
-                    <span class="mid-card-02-pill pill--{{ signal.signal_type|lower }}">{{ signal.signal_type|upper }}</span>
+                    <span class="mid-card-02-pill mid-card-02-pill--{{ signal.signal_type|lower }}">{{ signal.signal_type|upper }}</span>
                 </div>
                 {% else %}
                 <p>No signals yet today</p>
@@ -65,7 +65,7 @@
             </div>
         </div>
     </div>
-    <div class="card-container">
+    <div>
         <div class="bot-card">
             <div class="bot-card-head">
                 <h2>Your watchlist</h2>
@@ -88,11 +88,11 @@
                         <span class="watch-name">{{ stock.name }}</span>
                     </div>
                     <span>${{  "%.2f"|format(stock.price) }}</span>
-                    <span class="{{ 'up' if stock.change_pct >= 0 else 'down' }}">
+                    <span class="{{ 'up' if stock.change_pct is not none and stock.change_pct >= 0 else 'down' }}">
                         {{ "%+.1f"|format(stock.change_pct) }}%
                     </span>
                     <span>{{ stock.best_strategy }}</span>
-                    <span><span class="mid-card-02-pill pill--{{ stock.signal_type|lower }}">{{ stock.signal_type|upper }}</span></span>
+                    <span><span class="mid-card-02-pill mid-card-02-pill--{{ stock.signal_type|lower }}">{{ stock.signal_type|upper }}</span></span>
                 </div>
             {% else %}
             <p>Nothing currently on your watchlist</p>
@@ -126,12 +126,16 @@
                     data: {{chart_actual|tojson}},
                     borderColor: gold,
                     tension: 0.3
+                    pointRadius: 0,
+                    borderWidth: 2
                 },
                 {
                     label: 'Predicted',
                     data: {{chart_predicted|tojson}},
                     borderColor: green,
                     tension: 0.3
+                    pointRadius: 0,
+                    borderWidth: 2
                 }
             ]
         },
