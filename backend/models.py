@@ -4,7 +4,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    REAL, TIMESTAMP, Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func,
+    REAL, TIMESTAMP, Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, Column, DateTime
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
