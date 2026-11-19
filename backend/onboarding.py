@@ -57,9 +57,9 @@ def get_profile(user_id):
     return get_db().get(UserProfile, user_id)
 
 
-def step_is_done(step, profile):
-    if step["kind"] == "choice":
-        return getattr(profile, step["key"]) is not None
+def step_is_done(item, profile):
+    if item["kind"] == "choice":
+        return getattr(profile, item["key"]) is not None
     return profile.completed_at is not None
 
 
@@ -67,8 +67,8 @@ def current_step(profile):
     """Number (starting at 1) of the first unfinished step, or None when onboarding is complete."""
     if profile is not None and profile.completed_at is not None:
         return None
-    for number, step in enumerate(STEPS, start=1):
-        if profile is None or not step_is_done(step, profile):
+    for number, item in enumerate(STEPS, start=1):
+        if profile is None or not step_is_done(item, profile):
             return number
     return len(STEPS)
 

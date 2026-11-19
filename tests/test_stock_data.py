@@ -62,7 +62,7 @@ def test_inactive_stocks_are_hidden(seeded):
 
 def test_signals_show_what_each_strategy_says(seeded):
     msft = {s["strategy"]: s["signal"] for s in queries.latest_signals(seeded, ticker="MSFT")}
-    assert msft == {"Momentum": "BUY", "Mean reversion": "SELL"}
+    assert msft == {"Momentum": "BUY", "Mean Reversion": "SELL"}
 
 
 def test_signals_can_be_filtered_by_strategy(seeded):
@@ -74,7 +74,7 @@ def test_signals_can_be_filtered_by_strategy(seeded):
 def test_switched_off_strategies_are_not_shown(seeded):
     seeded.scalar(select(Strategy).where(Strategy.name == "Momentum")).is_active = False
     seeded.commit()
-    assert {s["strategy"] for s in queries.latest_signals(seeded)} == {"Mean reversion"}
+    assert {s["strategy"] for s in queries.latest_signals(seeded)} == {"Mean Reversion"}
 
 
 def test_latest_predictions(seeded):
@@ -85,12 +85,12 @@ def test_latest_predictions(seeded):
 # the database rejects bad data 
 
 @pytest.mark.parametrize("make_bad_row", [
-    lambda s: Stock(ticker="NYSE1", company_id=1, exchange_code="NYSE"),                                  # not NASDAQ
-    lambda s: StockData(ticker="AAPL", date="2024-01-12", open=1, high=2, low=1, close=1, volume=1),      # day already stored
-    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=7, close=6, volume=1),      # low above high
-    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=4, close=9, volume=1),      # close outside range
-    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="MAYBE"),  # not BUY/SELL/HOLD
-    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-01-12", signal_type="BUY"),   # strategy already spoke today
+    lambda s: Stock(ticker="NYSE1", company_id=1, exchange_code="NYSE"),# not NASDAQ
+    lambda s: StockData(ticker="AAPL", date="2024-01-12", open=1, high=2, low=1, close=1, volume=1), # day already stored
+    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=7, close=6, volume=1), # low above high
+    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=4, close=9, volume=1), # close outside range
+    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="MAYBE"), # not BUY/SELL/HOLD
+    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-01-12", signal_type="BUY"), # strategy already spoke today
     lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="BUY", confidence_score=1.5),
 ])
 def test_bad_rows_are_rejected(seeded, make_bad_row):
@@ -110,7 +110,7 @@ def test_watchlist_add_is_safe_to_repeat_and_shows_prices_and_signals(seeded):
 
     overview = queries.watchlist_overview(seeded, user.id)
     assert [r["ticker"] for r in overview] == ["AAPL", "MSFT"]
-    assert {s["strategy"] for s in overview[0]["signals"]} == {"Momentum", "Mean reversion"}
+    assert {s["strategy"] for s in overview[0]["signals"]} == {"Momentum", "Mean Reversion"}
     assert len(seeded.scalars(select(WatchlistItem)).all()) == 2
 
 
