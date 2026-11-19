@@ -3,8 +3,7 @@ from pathlib import Path
 from flask import Flask, abort
 from sqlalchemy import func, select
 
-from . import auth, db, pages, routes, dashboard, watchlist
-from . import auth, db, pages, routes, onboarding
+from . import auth, dashboard, db, onboarding, pages, routes, watchlist
 from .config import Config
 from .models import Company, Prediction, Stock, StockData
 from .security import csrf_token

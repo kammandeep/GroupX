@@ -62,7 +62,7 @@ def test_inactive_stocks_are_hidden(seeded):
 
 def test_signals_show_what_each_strategy_says(seeded):
     msft = {s["strategy"]: s["signal"] for s in queries.latest_signals(seeded, ticker="MSFT")}
-    assert msft == {"Momentum": "BUY", "Mean reversion": "SELL"}
+    assert msft == {"Momentum": "BUY", "Mean Reversion": "SELL"}
 
 
 def test_signals_can_be_filtered_by_strategy(seeded):
@@ -74,7 +74,7 @@ def test_signals_can_be_filtered_by_strategy(seeded):
 def test_switched_off_strategies_are_not_shown(seeded):
     seeded.scalar(select(Strategy).where(Strategy.name == "Momentum")).is_active = False
     seeded.commit()
-    assert {s["strategy"] for s in queries.latest_signals(seeded)} == {"Mean reversion"}
+    assert {s["strategy"] for s in queries.latest_signals(seeded)} == {"Mean Reversion"}
 
 
 def test_latest_predictions(seeded):
@@ -110,7 +110,7 @@ def test_watchlist_add_is_safe_to_repeat_and_shows_prices_and_signals(seeded):
 
     overview = queries.watchlist_overview(seeded, user.id)
     assert [r["ticker"] for r in overview] == ["AAPL", "MSFT"]
-    assert {s["strategy"] for s in overview[0]["signals"]} == {"Momentum", "Mean reversion"}
+    assert {s["strategy"] for s in overview[0]["signals"]} == {"Momentum", "Mean Reversion"}
     assert len(seeded.scalars(select(WatchlistItem)).all()) == 2
 
 
