@@ -1,11 +1,14 @@
 import pytest
+from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 
 from backend import queries
 from backend.models import (
     Company, Stock, StockData, Strategy, TradingSignal, User, UserWatchlist, WatchlistItem,
+    AlertRule, AlertEvent, UserSettings,
 )
+from backend.alerts import create_live_prediction_signals, sync_signal_alert_events
 from database.seed_data import populate_sample_data
 
 
@@ -82,12 +85,12 @@ def test_latest_predictions(seeded):
 # the database rejects bad data 
 
 @pytest.mark.parametrize("make_bad_row", [
-    lambda s: Stock(ticker="NYSE1", company_id=1, exchange_code="NYSE"),                                  # not NASDAQ
-    lambda s: StockData(ticker="AAPL", date="2024-01-12", open=1, high=2, low=1, close=1, volume=1),      # day already stored
-    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=7, close=6, volume=1),      # low above high
-    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=4, close=9, volume=1),      # close outside range
-    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="MAYBE"),  # not BUY/SELL/HOLD
-    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-01-12", signal_type="BUY"),   # strategy already spoke today
+    lambda s: Stock(ticker="NYSE1", company_id=1, exchange_code="NYSE"),# not NASDAQ
+    lambda s: StockData(ticker="AAPL", date="2024-01-12", open=1, high=2, low=1, close=1, volume=1), # day already stored
+    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=7, close=6, volume=1), # low above high
+    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=4, close=9, volume=1), # close outside range
+    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="MAYBE"), # not BUY/SELL/HOLD
+    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-01-12", signal_type="BUY"), # strategy already spoke today
     lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="BUY", confidence_score=1.5),
 ])
 def test_bad_rows_are_rejected(seeded, make_bad_row):
@@ -138,3 +141,160 @@ def test_existing_api_and_login_still_work(app, seeded):
     assert client.get("/health").get_json() == {"status": "healthy", "companies_count": 4}
     assert len(client.get("/api/stocks").get_json()) == 4
     assert client.get("/api/predictions").get_json()[0]["direction"] in ("up", "flat")
+
+
+# live ML alerts
+
+def test_live_prediction_creates_signal_and_app_alert(seeded):
+    user = make_user(seeded)
+    seeded.add(AlertRule(
+        user_id=user.id,
+        ticker="AAPL",
+        condition="BUY or SELL",
+        destination="app",
+        enabled=True,
+    ))
+    seeded.commit()
+
+    signals = create_live_prediction_signals(seeded, [{
+        "ticker": "AAPL",
+        "prediction_date": "2024-01-16",
+        "predicted_close": 61.25,
+        "confidence_score": 0.82,
+        "direction": "up",
+        "model_name": "xgboost_test",
+    }])
+
+    assert len(signals) == 1
+    assert signals[0].signal_type == "BUY"
+    events = seeded.scalars(select(AlertEvent).where(AlertEvent.user_id == user.id)).all()
+    assert len(events) == 1
+    assert events[0].title == "AAPL changed to BUY"
+
+
+def test_live_alert_status_is_private_and_reports_unread_count(app, seeded):
+    user = make_user(seeded)
+    rule = AlertRule(
+        user_id=user.id,
+        ticker="AAPL",
+        condition="BUY",
+        destination="app",
+        enabled=True,
+    )
+    seeded.add(rule)
+    seeded.commit()
+
+    strategy = seeded.scalar(select(Strategy).limit(1))
+    signal = TradingSignal(
+        ticker="AAPL",
+        strategy_id=strategy.id,
+        signal_date="2024-01-16",
+        signal_type="BUY",
+        confidence_score=0.9,
+        model_name="live_test",
+    )
+    seeded.add(signal)
+    seeded.flush()
+    seeded.add(AlertEvent(
+        user_id=user.id,
+        rule_id=rule.id,
+        signal_id=signal.id,
+        title="AAPL changed to BUY",
+        detail="live_test signal generated",
+        tone="buy",
+        created_at=datetime.now(),
+    ))
+    seeded.commit()
+
+    sync_signal_alert_events(seeded)
+    seeded.query(AlertEvent).filter(AlertEvent.user_id == user.id).update(
+        {"is_read": True}, synchronize_session=False
+    )
+    seeded.query(AlertEvent).filter(
+        AlertEvent.user_id == user.id,
+        AlertEvent.title == "AAPL changed to BUY",
+        AlertEvent.signal_id == signal.id,
+    ).update({"is_read": False}, synchronize_session=False)
+    seeded.commit()
+
+    client = app.test_client()
+    with client.session_transaction() as flask_session:
+        flask_session["user_id"] = user.id
+
+    response = client.get("/api/alerts/status")
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["unread_count"] == 1
+    assert payload["alerts"][0]["title"] == "AAPL changed to BUY"
+
+
+def test_quick_add_creates_popular_stock_alert(app, seeded):
+    user = make_user(seeded)
+    client = app.test_client()
+    with client.session_transaction() as flask_session:
+        flask_session["user_id"] = user.id
+        flask_session["_csrf"] = "test-csrf"
+
+    response = client.post("/alerts", data={
+        "csrf_token": "test-csrf",
+        "action": "quick_add",
+        "ticker": "AAPL",
+    })
+
+    assert response.status_code == 302
+    rule = seeded.scalar(select(AlertRule).where(
+        AlertRule.user_id == user.id,
+        AlertRule.ticker == "AAPL",
+    ))
+    assert rule is not None
+    assert rule.destination == "app"
+    assert rule.condition == "Signal changes to BUY or SELL"
+
+
+def test_stock_search_returns_related_active_stocks(app, seeded):
+    user = make_user(seeded)
+    client = app.test_client()
+    with client.session_transaction() as flask_session:
+        flask_session["user_id"] = user.id
+
+    response = client.get("/api/alerts/stocks?q=app")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert "AAPL" in [stock["ticker"] for stock in payload["stocks"]]
+
+
+def test_new_alert_rejects_unknown_stock(app, seeded):
+    user = make_user(seeded)
+    client = app.test_client()
+    with client.session_transaction() as flask_session:
+        flask_session["user_id"] = user.id
+        flask_session["_csrf"] = "test-csrf"
+
+    response = client.post("/alerts", data={
+        "csrf_token": "test-csrf",
+        "ticker": "ZZZZ",
+        "condition": "BUY",
+        "destination": "app",
+    })
+
+    assert response.status_code == 200
+    assert b"Choose an active stock" in response.data
+
+
+def test_app_notification_toggle_updates_user_setting(app, seeded):
+    user = make_user(seeded)
+    client = app.test_client()
+    with client.session_transaction() as flask_session:
+        flask_session["user_id"] = user.id
+        flask_session["_csrf"] = "test-csrf"
+
+    response = client.post("/alerts", data={
+        "csrf_token": "test-csrf",
+        "action": "toggle_notifications",
+    })
+
+    assert response.status_code == 302
+    settings = seeded.scalar(select(UserSettings).where(UserSettings.user_id == user.id))
+    assert settings is not None
+    assert settings.signal_alerts is False
