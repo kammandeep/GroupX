@@ -141,4 +141,23 @@ def watchlist_overview(session, user_id):
     return result
 
 
-
+"""Oldest-to-newest closes and dates for each active stock, newest `days` rows only.
+    Returns {ticker: {"name": ..., "dates": [...], "closes": [...]}}"""
+def close_series(session, days):
+    ranked = select(
+        StockData.ticker, StockData.date, StockData.close,
+        func.row_number().over(partition_by=StockData.ticker, order_by=StockData.date.desc()).label("rn"),
+    ).where(StockData.close.is_not(None)).subquery()
+    rows = session.execute(
+        select(Stock.ticker, Company.name, ranked.c.date, ranked.c.close)
+        .join(Company, Company.id == Stock.company_id)
+        .join(ranked, ranked.c.ticker == Stock.ticker)
+        .where(ranked.c.rn <= days, Stock.is_active.is_(True))
+        .order_by(Stock.ticker, ranked.c.date)
+    )
+    series = {}
+    for ticker, name, date, close in rows:
+        stock = series.setdefault(ticker, {"name": name, "dates": [], "closes": []})
+        stock["dates"].append(date)
+        stock["closes"].append(close)
+    return series
