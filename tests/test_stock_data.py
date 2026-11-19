@@ -85,12 +85,12 @@ def test_latest_predictions(seeded):
 # the database rejects bad data 
 
 @pytest.mark.parametrize("make_bad_row", [
-    lambda s: Stock(ticker="NYSE1", company_id=1, exchange_code="NYSE"),                                  # not NASDAQ
-    lambda s: StockData(ticker="AAPL", date="2024-01-12", open=1, high=2, low=1, close=1, volume=1),      # day already stored
-    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=7, close=6, volume=1),      # low above high
-    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=4, close=9, volume=1),      # close outside range
-    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="MAYBE"),  # not BUY/SELL/HOLD
-    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-01-12", signal_type="BUY"),   # strategy already spoke today
+    lambda s: Stock(ticker="NYSE1", company_id=1, exchange_code="NYSE"),# not NASDAQ
+    lambda s: StockData(ticker="AAPL", date="2024-01-12", open=1, high=2, low=1, close=1, volume=1), # day already stored
+    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=7, close=6, volume=1), # low above high
+    lambda s: StockData(ticker="AAPL", date="2024-02-01", open=5, high=6, low=4, close=9, volume=1), # close outside range
+    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="MAYBE"), # not BUY/SELL/HOLD
+    lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-01-12", signal_type="BUY"), # strategy already spoke today
     lambda s: TradingSignal(ticker="AAPL", strategy_id=1, signal_date="2024-02-01", signal_type="BUY", confidence_score=1.5),
 ])
 def test_bad_rows_are_rejected(seeded, make_bad_row):
