@@ -1,0 +1,8 @@
+<div class="topbar__user">
+    <span class="avatar" aria-hidden="true">{{ g.user.username[0]|upper }}</span>
+    <span>{{ g.user.username }}</span>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline" type="submit">Log out</button>
+    </form>
+</div>

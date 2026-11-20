@@ -1,0 +1,14 @@
+<dialog class="stock-search" id="stock-search" aria-labelledby="stock-search-title"
+        data-url="{{ url_for('stock_search.stock_search') }}">
+    <div class="stock-search__head">
+        <h2 id="stock-search-title">Stock search</h2>
+        <button class="stock-search__close" type="button" data-close-stock-search aria-label="Close">&times;</button>
+    </div>
+    <input class="stock-search__input" id="stock-search-input" type="search" maxlength="40"
+           placeholder="Search ticker or company" autocomplete="off" aria-label="Search stocks">
+    <ul class="stock-search__list" id="stock-search-list" aria-live="polite"></ul>
+    <div class="stock-search__empty" id="stock-search-empty" hidden>
+        <p class="stock-search__empty-title">Stock not available</p>
+        <p class="muted" id="stock-search-empty-detail"></p>
+    </div>
+</dialog>

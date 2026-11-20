@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% from 'strategies/_macros.html' import pct, tone, signal %}
+{% block title %}Strategies | Project JAK{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/strategies.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <header class="topbar">
+        <div>
+            <h1>Strategies</h1>
+            <p class="muted">Four simple ways to read a stock, tested on past prices</p>
+        </div>
+        {% include 'partials/topbar_user.html' %}
+    </header>
+
+    <div class="strat-grid">
+        {% for card in cards %}
+        <a class="strat-card" href="{{ url_for('strategies.strategy_detail', slug=card.strategy.slug) }}">
+            <div class="strat-card__head">
+                <h2>{{ card.strategy.name }}</h2>
+                <span class="muted">{{ card.stock_count }} stock{{ '' if card.stock_count == 1 else 's' }}</span>
+            </div>
+            <p class="muted">{{ card.strategy.summary }}</p>
+
+            <div class="strat-card__stats">
+                <div><span class="strat-label">Accuracy</span><strong>{{ pct(card.accuracy) }}</strong></div>
+                <div><span class="strat-label">Return ({{ card.period }})</span><strong class="{{ tone(card.return_pct) }}">{{ pct(card.return_pct, signed=true) }}</strong></div>
+                <div><span class="strat-label">Win rate</span><strong>{{ pct(card.win_rate) }}</strong></div>
+            </div>
+
+            <div class="strat-card__foot">
+                <div class="strat-card__signals">
+                    <span class="strat-label">Today</span>
+                    {% for name in ['BUY', 'HOLD', 'SELL'] %}
+                    <span class="signal signal--{{ name|lower }}">{{ card.signal_counts.get(name, 0) }} {{ name }}</span>
+                    {% endfor %}
+                </div>
+                <span class="link-gold">View details &rarr;</span>
+            </div>
+        </a>
+        {% else %}
+        <p class="muted">No strategies available.</p>
+        {% endfor %}
+    </div>
+
+    <p class="strat-disclaimer muted">Not financial advice. Averages are across the stocks we track and come from replaying past prices, with no fees or slippage. Past results don't predict the future.</p>
+</div>
+{% endblock %}
