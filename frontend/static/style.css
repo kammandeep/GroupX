@@ -82,6 +82,7 @@ a { color: var(--gold); }
 .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
 .num { font-size: 36px; font-weight: 700; margin-top: 12px; }
 .gold { color: var(--gold); }
+.sidebar__note { display: none; }
 
 /*Small screens*/
 
