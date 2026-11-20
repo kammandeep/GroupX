@@ -24,6 +24,7 @@
                 <a class="nav nav__item {{ 'active is-active' if request.endpoint in ['pages.learn', 'pages.learn_lesson'] }}" href="{{ url_for('pages.learn')}}">Learn</a>
                 <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'pages.settings' }}" href="{{ url_for('pages.settings')}}">Settings</a>
             </nav>
+            <p class="sidebar__note">Signals are for learning. Not financial advice.</p>
         </aside>
         {% endblock %}
         <main>
