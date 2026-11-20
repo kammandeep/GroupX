@@ -12,7 +12,10 @@
 
   function row(stock) {
     const item = document.createElement('li');
-    item.className = 'stock-search__row';
+    const link = document.createElement('a');
+    link.className = 'stock-search__row';
+    link.href = dialog.dataset.stockUrl.replace('TICKER', encodeURIComponent(stock.ticker));
+    item.append(link);
 
     const label = document.createElement('div');
     const ticker = document.createElement('strong');
@@ -33,7 +36,7 @@
       change.textContent = `${stock.change_pct >= 0 ? '+' : ''}${stock.change_pct.toFixed(1)}%`;
     }
 
-    item.append(label, price, change);
+    link.append(label, price, change);
     return item;
   }
 

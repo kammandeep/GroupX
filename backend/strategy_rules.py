@@ -1,10 +1,17 @@
+"""Four simple, rule-based strategies and a long-only backtest.
+
+Pure Python: no Flask or database imports, so it can be tested on its own.
+Each rule gets the most recent WARMUP closes (oldest first) and returns
+(signal, why), where signal is "BUY", "SELL" or "HOLD".
+"""
+
 from statistics import mean, pstdev
 
-WARMUP = 50 # closes every rule needs
+WARMUP = 50           # closes every rule needs
 BACKTEST_DAYS = 1260  # about 5 trading years
-HORIZON = 5   # days ahead used to judge whether a BUY/SELL call was right
+HORIZON = 5           # days ahead used to judge whether a BUY/SELL call was right
 TRADING_DAYS_PER_YEAR = 252
-SPLIT_TRIGGER = 1.8  # a one-day fall this big is a stock split, not a market move
+SPLIT_TRIGGER = 1.8   # a one-day fall this big is a stock split, not a market move
 SPLIT_RATIOS = (2, 3, 4, 5, 8, 10, 15, 20, 25, 30, 50)
 
 
@@ -114,6 +121,7 @@ def backtest(closes, rule, days=BACKTEST_DAYS):
     max_drop = 0.0
     calls = hits = trades = wins = 0
     growth = []
+    marks = []  # (index into closes, "BUY" or "SELL") for each entry and exit
 
     for i in range(start, len(closes)):
         if in_position:
@@ -129,8 +137,10 @@ def backtest(closes, rule, days=BACKTEST_DAYS):
             hits += went_up if signal == "BUY" else not went_up
         if signal == "BUY" and not in_position:
             in_position, entry_price = True, closes[i]
+            marks.append((i, "BUY"))
         elif signal == "SELL" and in_position:
             in_position = False
+            marks.append((i, "SELL"))
             trades += 1
             wins += closes[i] > entry_price
 
@@ -144,6 +154,7 @@ def backtest(closes, rule, days=BACKTEST_DAYS):
         "accuracy_pct": round(hits / calls * 100) if calls else None,
         "win_rate_pct": round(wins / trades * 100) if trades else None,
         "trades": trades,
+        "marks": marks,
     }
 
 
