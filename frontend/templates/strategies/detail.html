@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% from 'strategies/_macros.html' import pct, tone, signal %}
+{% block title %}{{ strategy.name }} | Project JAK{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/strategies.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <a class="back-link" href="{{ url_for('strategies.strategy_list') }}">&lt; Back to strategies</a>
+    <header class="topbar">
+        <div>
+            <h1>{{ strategy.name }}</h1>
+            <p class="muted">Strategy detail</p>
+        </div>
+        {% include 'partials/topbar_user.html' %}
+    </header>
+
+    {% if not selected %}
+    <section class="strat-panel">
+        <h2>No price history yet</h2>
+        <p class="muted">This strategy needs at least {{ min_days }} days of prices for a stock before it can show a signal.</p>
+    </section>
+    {% else %}
+    <div class="strat-main">
+        <section class="strat-panel">
+            <div class="strat-chart__head">
+                <div>
+                    <h2>{{ selected.ticker }} <span class="muted">{{ selected.name }}</span></h2>
+                    <p class="muted">Growth of 100 over {{ period }}</p>
+                </div>
+                <div class="strat-legend">
+                    <span><i class="strat-legend__swatch strat-legend__swatch--strategy"></i>{{ strategy.name }}</span>
+                    <span><i class="strat-legend__swatch strat-legend__swatch--hold"></i>Buy and hold</span>
+                </div>
+            </div>
+
+            <nav class="strat-tabs" aria-label="Choose a stock">
+                {% for r in results %}
+                <a class="strat-tab {{ 'is-active' if r.ticker == selected.ticker }}"
+                   href="{{ url_for('strategies.strategy_detail', slug=strategy.slug, ticker=r.ticker) }}">{{ r.ticker }}</a>
+                {% endfor %}
+            </nav>
+
+            <svg class="strat-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img"
+                 aria-label="{{ strategy.name }} compared with buy and hold for {{ selected.ticker }}">
+                <g transform="translate({{ chart.left }},{{ chart.top }})">
+                    {% for y, label in chart.y_ticks %}
+                    <line class="strat-chart__grid" x1="0" x2="{{ chart.plot_w }}" y1="{{ y }}" y2="{{ y }}"/>
+                    <text class="strat-chart__label" x="-8" y="{{ y + 4 }}" text-anchor="end">{{ label }}</text>
+                    {% endfor %}
+                    <polyline class="strat-chart__line strat-chart__line--hold" points="{{ chart.buy_hold }}"/>
+                    <polyline class="strat-chart__line strat-chart__line--strategy" points="{{ chart.strategy }}"/>
+                    {% for x, label in chart.x_ticks %}
+                    <text class="strat-chart__label" x="{{ x }}" y="{{ chart.plot_h + 20 }}"
+                          text-anchor="{{ 'start' if loop.first else 'end' if loop.last else 'middle' }}">{{ label }}</text>
+                    {% endfor %}
+                </g>
+            </svg>
+        </section>
+
+        <aside class="strat-panel">
+            <p class="muted">Today's signal for {{ selected.ticker }}</p>
+            <div class="signal-box signal-box--{{ selected.signal|lower }}">{{ selected.signal }}</div>
+
+            <h3>Why this signal</h3>
+            <ul class="strat-why">
+                <li>{{ selected.why }}</li>
+                <li>{{ selected.trades }} completed trade{{ '' if selected.trades == 1 else 's' }} in the backtest</li>
+                <li>Buy and hold returned {{ pct(selected.buy_hold[-1] - 100, signed=true) }} over the same period</li>
+            </ul>
+
+            <h3>How it works</h3>
+            <ul class="strat-why">
+                {% for step in strategy.steps %}<li>{{ step }}</li>{% endfor %}
+            </ul>
+        </aside>
+    </div>
+
+    <div class="strat-stats">
+        <div class="display-card"><h2>Backtest accuracy</h2><p>{{ pct(selected.accuracy_pct) }}</p></div>
+        <div class="display-card"><h2>Return ({{ period }})</h2><p class="{{ tone(selected.return_pct) }}">{{ pct(selected.return_pct, signed=true) }}</p></div>
+        <div class="display-card"><h2>Max drop</h2><p class="down">{{ pct(selected.max_drop_pct) }}</p></div>
+        <div class="display-card"><h2>Win rate</h2><p>{{ pct(selected.win_rate_pct) }}</p></div>
+    </div>
+
+    <section class="strat-panel">
+        <h2>{{ strategy.name }} on every stock</h2>
+        <div class="strat-table">
+            <div class="strat-row strat-row--head">
+                <span>Stock</span><span>Accuracy</span><span>Return</span><span>Win rate</span><span>Signal</span>
+            </div>
+            {% for r in results %}
+            <a class="strat-row {{ 'is-active' if r.ticker == selected.ticker }}"
+               href="{{ url_for('strategies.strategy_detail', slug=strategy.slug, ticker=r.ticker) }}">
+                <span><strong>{{ r.ticker }}</strong> <span class="muted">{{ r.name }}</span></span>
+                <span>{{ pct(r.accuracy_pct) }}</span>
+                <span class="{{ tone(r.return_pct) }}">{{ pct(r.return_pct, signed=true) }}</span>
+                <span>{{ pct(r.win_rate_pct) }}</span>
+                <span>{{ signal(r.signal) }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <p class="strat-disclaimer muted">Not financial advice. Accuracy is how often a BUY or SELL call was right five trading days later. The backtest is long-only and ignores fees and slippage; past results don't predict the future.</p>
+</div>
+{% endblock %}

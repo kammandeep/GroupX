@@ -41,7 +41,10 @@
         <div class="mid-card-01">
             <h2>NASDAQ-100 vs JAK Momentum Strategy</h2>
             <div class="mid-card-01-chart-wrap">
-                <canvas id="perfChart"></canvas>
+                <canvas id="perfChart"
+                        data-chart-labels="{{ chart_labels|tojson }}"
+                        data-chart-actual="{{ chart_actual|tojson }}"
+                        data-chart-predicted="{{ chart_predicted|tojson }}"></canvas>
             </div>
         </div>
         <div class="mid-card-02">

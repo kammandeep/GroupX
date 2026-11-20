@@ -1,0 +1,14 @@
+{% macro pct(value, signed=false) -%}
+    {%- if value is none -%}-
+    {%- elif signed -%}{{ "%+.0f"|format(value) }}%
+    {%- else -%}{{ "%.0f"|format(value) }}%{%- endif -%}
+{%- endmacro %}
+
+{# 'up' (green) for gains, 'down' (red) for losses, nothing when there is no value #}
+{% macro tone(value) -%}
+    {%- if value is none -%}{%- elif value >= 0 -%}up{%- else -%}down{%- endif -%}
+{%- endmacro %}
+
+{% macro signal(value) -%}
+    {%- if value -%}<span class="signal signal--{{ value|lower }}">{{ value }}</span>{%- else -%}-{%- endif -%}
+{%- endmacro %}

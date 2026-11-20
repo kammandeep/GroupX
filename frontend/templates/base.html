@@ -6,6 +6,7 @@
         <title>{% block title %} Project JAK {% endblock %}</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/stock_search.css') }}">
         {% block head %}{% endblock %}
     </head>
     <body>
@@ -16,8 +17,8 @@
             <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.svg')}}" alt="JAK logo"/>
             <nav aria-label="Main">
                 <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'dashboard.dashboard' }}" href="{{ url_for('dashboard.dashboard')}}">Home</a>
-                {#<a class="nav {{ 'active' if request.endpoint == 'pages.stock_search' }}" href="{{ url_for('pages.stock_search')}}">Stock Search</a>#}
-                {#<a class="nav {{ 'active' if request.endpoint == 'pages.strategy_search' }}" href="{{ url_for('pages.strategy_search')}}">Strategy Search</a>#}
+                <button class="nav nav__item nav--button" type="button" data-open-stock-search>Stock search</button>
+                <a class="nav nav__item {{ 'active is-active' if request.endpoint in ['strategies.strategy_list', 'strategies.strategy_detail'] }}" href="{{ url_for('strategies.strategy_list')}}">Strategy search</a>
                 <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'watchlist.watchlist' }}" href="{{ url_for('watchlist.watchlist')}}">Watchlist</a>
                 <a class="nav nav__item {{ 'active is-active' if request.endpoint == 'pages.alerts' }}" href="{{ url_for('pages.alerts')}}">Alerts</a>
                 <a class="nav nav__item {{ 'active is-active' if request.endpoint in ['pages.learn', 'pages.learn_lesson'] }}" href="{{ url_for('pages.learn')}}">Learn</a>
@@ -29,6 +30,8 @@
             {% block content %}{% endblock %}
         </main>
         </div>
+        {% include 'partials/stock_search.html' %}
+        <script src="{{ url_for('static', filename='js/stock_search.js') }}"></script>
         {% endblock %}
         {% block scripts %}{% endblock %}
     </body>
