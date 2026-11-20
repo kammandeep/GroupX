@@ -128,6 +128,9 @@
                     label: 'Actual',
                     data: {{chart_actual|tojson}},
                     borderColor: gold,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
                     tension: 0.3
 
                 },
@@ -135,6 +138,9 @@
                     label: 'Predicted',
                     data: {{chart_predicted|tojson}},
                     borderColor: green,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
                     tension: 0.3
 
                 }
@@ -142,13 +148,20 @@
         },
         options: {
             maintainAspectRatio: false,
+            interaction: {mode: 'index', intersect: false},
             plugins: {legend: {labels:{color:muted}}},
             scales: {
-                x: {ticks: {color:muted}, grid: {color:border}},
-                y: {ticks: {color:muted}, grid: {color:border}}
+                x: {
+                    ticks: {color:muted, maxTicksLimit: 8, maxRotation:0}, 
+                    grid: {color:border}
+                },
+                y: {
+                    ticks: {color:muted}, 
+                grid: {color:border}
+                }
+            }
         }
-        }
-    })
+    });
 
 </script>
 
