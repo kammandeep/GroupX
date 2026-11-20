@@ -121,6 +121,12 @@ def test_stock_search_returns_nothing_for_an_unlisted_stock(client):
     assert client.get("/api/stock-search?q=zzzz").json["stocks"] == []
 
 
+def test_stock_search_dialog_provides_stock_detail_url(client):
+    response = client.get("/dashboard")
+    assert response.status_code == 200
+    assert b'data-stock-url="/stocks/TICKER"' in response.data
+
+
 def test_stock_search_needs_a_login(app):
     assert app.test_client().get("/api/stock-search").status_code == 302
 
@@ -135,6 +141,13 @@ def test_strategy_pages_show_signals_for_stocks_with_history(client, seeded):
 def test_strategy_detail_explains_when_there_is_no_history(client):
     # the sample data only has 7 days per stock
     assert b"No price history yet" in client.get("/strategies/breakout").data
+
+
+def test_stock_detail_renders_after_search_result_is_selected(client, seeded):
+    add_stock(seeded, "NVDA", rising(80))
+    response = client.get("/stocks/NVDA")
+    assert response.status_code == 200
+    assert b"All strategies on NVDA" in response.data
 
 
 def test_unknown_strategy_is_a_404(client):

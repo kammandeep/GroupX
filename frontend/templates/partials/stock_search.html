@@ -1,5 +1,6 @@
 <dialog class="stock-search" id="stock-search" aria-labelledby="stock-search-title"
-        data-url="{{ url_for('stock_search.stock_search') }}">
+        data-url="{{ url_for('stock_search.stock_search') }}"
+        data-stock-url="{{ url_for('stocks.stock_detail', ticker='TICKER') }}">
     <div class="stock-search__head">
         <h2 id="stock-search-title">Stock search</h2>
         <button class="stock-search__close" type="button" data-close-stock-search aria-label="Close">&times;</button>

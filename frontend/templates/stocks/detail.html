@@ -95,4 +95,21 @@
         <h2>All strategies on {{ ticker }}</h2>
         <div class="strat-table">
             <div class="strat-row strat-row--head">
-                <span>Strategy</span><span>Accuracy</span><span>Return</span><span>Win
+                <span>Strategy</span><span>Accuracy</span><span>Return</span><span>Win rate</span><span>Signal</span>
+            </div>
+            {% for row in rows %}
+            <div class="strat-row {{ 'is-active' if row.strategy.name == best.strategy.name }}">
+                <span>{{ row.strategy.name }}</span>
+                <span>{{ pct(row.accuracy_pct) }}</span>
+                <span class="{{ tone(row.return_pct) }}">{{ pct(row.return_pct, signed=true) }}</span>
+                <span>{{ pct(row.win_rate_pct) }}</span>
+                <span>{{ signal(row.signal) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <p class="strat-disclaimer muted">Not financial advice. Accuracy is how often a BUY or SELL call was right five trading days later. The backtest is long-only and ignores fees and slippage; past results don't predict the future.</p>
+</div>
+{% endblock %}
