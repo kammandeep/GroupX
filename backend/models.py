@@ -1,7 +1,7 @@
 # ========================
 # Flask SQLAlchemy Models
 # ========================
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, Text, REAL, Boolean, TIMESTAMP, ForeignKey, Index, Integer, String, DateTime, UniqueConstraint, CheckConstraint, func
 
 from sqlalchemy import (
     REAL, TIMESTAMP, Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, Column, DateTime
@@ -25,9 +25,9 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)  # never the password itself
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)  # filled in by the database
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now(), nullable=False)
-    last_login_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)  # filled in by the database
+    updated_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now(), nullable=False)
+    last_login_at: Mapped[DateTime | None] = mapped_column(TIMESTAMP, nullable=True)
     is_active: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 1 = active, 0 = disabled
 
 
@@ -49,8 +49,8 @@ class UserProfile(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
     goal: Mapped[str | None] = mapped_column(String(20))
     experience_level: Mapped[str | None] = mapped_column(String(20))
-    completed_at: Mapped[datetime | None] = mapped_column(TIMESTAMP)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    completed_at: Mapped[DateTime | None] = mapped_column(TIMESTAMP)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 class AlertRule(Base):
     __tablename__ = "alert_rules"
@@ -91,7 +91,7 @@ class Company(Base):
     sector: Mapped[str | None] = mapped_column(Text)
     industry: Mapped[str | None] = mapped_column(Text)
     website: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 
 # =======================
@@ -110,7 +110,7 @@ class Stock(Base):
     exchange_code: Mapped[str] = mapped_column(String(10), default=MARKET, nullable=False)  # the market it trades on
     currency: Mapped[str] = mapped_column(String(3), default='USD', nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # False = stop showing it
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 
 # ====================================================================
@@ -135,7 +135,7 @@ class StockData(Base):
     low: Mapped[float] = mapped_column(REAL, nullable=False)
     close: Mapped[float] = mapped_column(REAL, nullable=False)
     volume: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 
 # ============================
@@ -160,7 +160,7 @@ class Prediction(Base):
     direction: Mapped[str] = mapped_column(String(10), default='flat', nullable=False)  # expected price movement
     prediction_type: Mapped[str] = mapped_column(String(50), default='daily', nullable=False)
     model_name: Mapped[str] = mapped_column(String(100), default='baseline', nullable=False)  # e.g. 'xgboost', 'lstm'
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 
 # ===========================
@@ -175,7 +175,7 @@ class Strategy(Base):
     description: Mapped[str | None] = mapped_column(Text)  # plain-English explanation shown to users
     model_name: Mapped[str | None] = mapped_column(String(100))  # which model feeds it, if any
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 
 # =========================================================
@@ -189,7 +189,7 @@ class UserWatchlist(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 
 class WatchlistItem(Base):
@@ -199,7 +199,7 @@ class WatchlistItem(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     watchlist_id: Mapped[int] = mapped_column(Integer, ForeignKey('user_watchlists.id', ondelete='CASCADE'), nullable=False)
     ticker: Mapped[str] = mapped_column(String(10), ForeignKey('stocks.ticker'), nullable=False)
-    added_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    added_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 
 # =================================
@@ -223,7 +223,7 @@ class TradingSignal(Base):
     confidence_score: Mapped[float] = mapped_column(REAL, default=0.0, nullable=False)
     target_price: Mapped[float | None] = mapped_column(REAL)
     model_name: Mapped[str | None] = mapped_column(String(100))
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
 # ====================================
 # SECTION 8: SIGNAL FLAGS & GUARDRAILS  
